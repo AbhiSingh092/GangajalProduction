@@ -2,7 +2,7 @@ import { MessageCircle } from 'lucide-react';
 
 export default function WhatsAppButton() {
   const handleWhatsAppClick = () => {
-    window.open('https://wa.me/918383063751?text=Hi, I would like to inquire about your photography services', '_blank');
+    window.open('https://wa.me/918506096176?text=Hi, I would like to inquire about your photography services', '_blank');
   };
 
   return (
