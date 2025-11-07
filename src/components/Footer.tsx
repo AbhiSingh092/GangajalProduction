@@ -22,15 +22,15 @@ export default function Footer() {
             <div className="space-y-3">
               <div className="flex items-center space-x-3 text-gray-400 hover:text-amber-500 transition-colors">
                 <Mail className="w-4 h-4" />
-                <span className="text-sm">contact@gangajalproduction.com</span>
+                <span className="text-sm">gangajalproduction@gmail.com</span>
               </div>
               <div className="flex items-center space-x-3 text-gray-400 hover:text-amber-500 transition-colors">
                 <Phone className="w-4 h-4" />
-                <span className="text-sm">+91 98765 43210</span>
+                <span className="text-sm">+91 8506096176</span>
               </div>
               <div className="flex items-center space-x-3 text-gray-400 hover:text-amber-500 transition-colors">
                 <MapPin className="w-4 h-4" />
-                <span className="text-sm">Mumbai, Maharashtra, India</span>
+                <span className="text-sm">Delhi,India</span>
               </div>
             </div>
           </div>
