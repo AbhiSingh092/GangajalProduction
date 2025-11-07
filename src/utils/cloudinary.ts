@@ -40,12 +40,15 @@ export const UPLOAD_PRESET = 'gangajal_preset';
 
 // Function to upload image to Cloudinary
 export const uploadImage = async (file: File): Promise<string> => {
+  console.log('Starting upload for file:', file.name);
+  
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', UPLOAD_PRESET);
   formData.append('cloud_name', 'dbz9tnzid');
 
   try {
+    console.log('Sending request to Cloudinary...');
     const response = await fetch(`https://api.cloudinary.com/v1_1/dbz9tnzid/image/upload`, {
       method: 'POST',
       body: formData
@@ -55,7 +58,14 @@ export const uploadImage = async (file: File): Promise<string> => {
       throw new Error('Upload failed');
     }
 
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Upload failed:', response.status, errorData);
+      throw new Error(`Upload failed: ${response.status} ${errorData}`);
+    }
+
     const data = await response.json();
+    console.log('Upload successful:', data.secure_url);
     return data.secure_url;
   } catch (error) {
     console.error('Upload error:', error);

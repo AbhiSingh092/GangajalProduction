@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Camera, Video, Sparkles, Plane, Briefcase, X, Image, Film } from 'lucide-react';
+import { useCategoryImages } from '../hooks/useCategoryImages';
 import CloudinaryImage from './CloudinaryImage';
 
 interface Category {
@@ -13,6 +14,7 @@ interface Category {
 
 export default function ShootCategories() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const { getImagesForCategory } = useCategoryImages();
 
   const categories: Category[] = [
     {
@@ -20,9 +22,7 @@ export default function ShootCategories() {
       title: 'Product Photography',
       icon: Camera,
       description: 'Stunning product shots that make your brand stand out',
-      images: [
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762524478/pmy0vynnyqjavbfvrror.jpg',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762524478/pmy0vynnyqjavbfvrror.jpg',
+      images: getImagesForCategory('product') || [
         'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762524478/pmy0vynnyqjavbfvrror.jpg'
       ],
       mediaTypes: [
@@ -35,11 +35,7 @@ export default function ShootCategories() {
       title: 'Fashion & Portrait',
       icon: Sparkles,
       description: 'Elegant fashion photography and captivating portraits',
-      images: [
-        'src/pic4.jpg',
-        'src/pic5.jpg',
-        'src/pic6.jpg'
-      ],
+      images: getImagesForCategory('fashion') || [],
       mediaTypes: [
         { type: 'photo', label: 'Fashion Photography' },
         { type: 'video', label: 'Portrait Reels' }
@@ -50,11 +46,7 @@ export default function ShootCategories() {
       title: 'Event Coverage',
       icon: Video,
       description: 'Capturing unforgettable moments at your special events',
-      images: [
-        'src/pic8.jpg',
-        'src/pic8.jpg',
-        'src/pic10.jpg'
-      ],
+      images: getImagesForCategory('event') || [],
       mediaTypes: [
         { type: 'photo', label: 'Event Photography' },
         { type: 'video', label: 'Event Cinematography' }
@@ -65,11 +57,7 @@ export default function ShootCategories() {
       title: 'Travel & Lifestyle',
       icon: Plane,
       description: 'Documenting journeys and authentic lifestyle moments',
-      images: [
-        'src/image/pic5.jpg',
-        'src/image/pic5.jpg',
-        'src/image/pic6.jpg'
-      ],
+      images: getImagesForCategory('travel') || [],
       mediaTypes: [
         { type: 'photo', label: 'Travel Photography' },
         { type: 'video', label: 'Travel Documentaries' }
@@ -80,11 +68,7 @@ export default function ShootCategories() {
       title: 'Commercial',
       icon: Briefcase,
       description: 'Professional content for brands and businesses',
-      images: [
-        'src/image/pic8.jpg',
-        'src/image/pic9.png',
-        'src/image/pic10.jpg'
-      ],
+      images: getImagesForCategory('commercial') || [],
       mediaTypes: [
         { type: 'photo', label: 'Commercial Shoots' },
         { type: 'video', label: 'Brand Videos' }
