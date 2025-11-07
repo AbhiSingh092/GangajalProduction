@@ -132,7 +132,7 @@ export default function ShootCategories() {
       description: 'Documenting journeys and authentic lifestyle moments',
       // Paste your travel image URLs in this array
       images: [
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543162/cwenbjdzbwu0dm0wgomr.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762545478/kilxffw8rf2fzgk5lzms.jpg',
         'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543348/z4okyxqav3avbruxvvf2.jpg',
         // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-travel-image',
         ...categoryImages['travel'] || []
