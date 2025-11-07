@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { uploadImage } from '../utils/cloudinary';
 import { useCategoryImages } from '../hooks/useCategoryImages';
@@ -22,7 +22,16 @@ export default function ImageUploadPage() {
   const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0].id);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
   const { addImageToCategory } = useCategoryImages();
+  
+  // Clear notification after 3 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (!selectedCategory) {
@@ -42,11 +51,18 @@ export default function ImageUploadPage() {
           const result = await uploadImage(file, selectedCategory);
           console.log('Successfully uploaded:', file.name);
           
-          setUploadedImages(prev => [...prev, {
+          const newImage = {
             url: result.url,
             name: file.name,
             category: selectedCategory
-          }]);
+          };
+          
+          setUploadedImages(prev => [...prev, newImage]);
+          
+          // Copy URL to clipboard
+          await navigator.clipboard.writeText(result.url);
+          console.log('URL copied to clipboard:', result.url);
+          setNotification('Image URL copied to clipboard!');
         } catch (err) {
           console.error('Error uploading file:', file.name, err);
           setError(`Failed to upload ${file.name}: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -121,6 +137,13 @@ export default function ImageUploadPage() {
         {error && (
           <div className="bg-red-500/20 border border-red-500 text-red-300 p-4 rounded-lg mb-8">
             {error}
+          </div>
+        )}
+
+        {/* Notification */}
+        {notification && (
+          <div className="fixed top-4 right-4 bg-green-500/20 border border-green-500 text-green-300 p-4 rounded-lg shadow-lg">
+            {notification}
           </div>
         )}
 

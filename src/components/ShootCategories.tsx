@@ -15,14 +15,22 @@ interface Category {
 export default function ShootCategories() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [categoryImages, setCategoryImages] = useState<{ [key: string]: string[] }>({});
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const loadImages = async () => {
+  const loadImages = async () => {
+    setIsLoading(true);
+    try {
+      console.log('Fetching images for all categories...');
       const productImages = await fetchImagesByCategory('product');
+      console.log('Product images:', productImages);
       const fashionImages = await fetchImagesByCategory('fashion');
+      console.log('Fashion images:', fashionImages);
       const eventImages = await fetchImagesByCategory('event');
+      console.log('Event images:', eventImages);
       const travelImages = await fetchImagesByCategory('travel');
+      console.log('Travel images:', travelImages);
       const commercialImages = await fetchImagesByCategory('commercial');
+      console.log('Commercial images:', commercialImages);
 
       setCategoryImages({
         product: productImages,
@@ -31,9 +39,22 @@ export default function ShootCategories() {
         travel: travelImages,
         commercial: commercialImages
       });
-    };
+    } catch (error) {
+      console.error('Error loading images:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // Load images on mount
+  useEffect(() => {
     loadImages();
+  }, []);
+
+  // Refresh images every 30 seconds
+  useEffect(() => {
+    const intervalId = setInterval(loadImages, 30000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const categories: Category[] = [
@@ -42,7 +63,11 @@ export default function ShootCategories() {
       title: 'Product Photography',
       icon: Camera,
       description: 'Stunning product shots that make your brand stand out',
-      images: categoryImages['product'] || [],
+      // Paste your product image URLs in this array
+      images: [
+        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-image-id',
+        ...categoryImages['product'] || []
+      ],
       mediaTypes: [
         { type: 'photo', label: 'Product Photos' },
         { type: 'video', label: '360° Product Videos' }
@@ -53,7 +78,11 @@ export default function ShootCategories() {
       title: 'Fashion & Portrait',
       icon: Sparkles,
       description: 'Elegant fashion photography and captivating portraits',
-      images: categoryImages['fashion'] || [],
+      // Paste your fashion image URLs in this array
+      images: [
+        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-fashion-image',
+        ...categoryImages['fashion'] || []
+      ],
       mediaTypes: [
         { type: 'photo', label: 'Fashion Photography' },
         { type: 'video', label: 'Portrait Reels' }
@@ -64,7 +93,11 @@ export default function ShootCategories() {
       title: 'Event Coverage',
       icon: Video,
       description: 'Capturing unforgettable moments at your special events',
-      images: categoryImages['event'] || [],
+      // Paste your event image URLs in this array
+      images: [
+        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-event-image',
+        ...categoryImages['event'] || []
+      ],
       mediaTypes: [
         { type: 'photo', label: 'Event Photography' },
         { type: 'video', label: 'Event Cinematography' }
@@ -75,7 +108,12 @@ export default function ShootCategories() {
       title: 'Travel & Lifestyle',
       icon: Plane,
       description: 'Documenting journeys and authentic lifestyle moments',
-      images: categoryImages['travel'] || [],
+      // Paste your travel image URLs in this array
+      images: [
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543162/cwenbjdzbwu0dm0wgomr.jpg',
+        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-travel-image',
+        ...categoryImages['travel'] || []
+      ],
       mediaTypes: [
         { type: 'photo', label: 'Travel Photography' },
         { type: 'video', label: 'Travel Documentaries' }
@@ -119,7 +157,11 @@ export default function ShootCategories() {
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
                 <div className="h-80 transition-transform duration-700 group-hover:scale-110 overflow-hidden">
-                  {category.images[0] ? (
+                  {isLoading ? (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
+                      <span className="text-gray-400">Loading...</span>
+                    </div>
+                  ) : category.images[0] ? (
                     <CloudinaryImage
                       src={category.images[0]}
                       alt={category.title}
@@ -190,7 +232,11 @@ export default function ShootCategories() {
                       key={index}
                       className="h-64 rounded-lg overflow-hidden group cursor-pointer"
                     >
-                      {image ? (
+                      {isLoading ? (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
+                          <span className="text-gray-400">Loading...</span>
+                        </div>
+                      ) : image ? (
                         <CloudinaryImage
                           src={image}
                           alt={`${selectedCategory.title} ${index + 1}`}
