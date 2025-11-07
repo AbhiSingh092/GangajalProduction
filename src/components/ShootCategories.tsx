@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Camera, Video, Sparkles, Plane, Briefcase, X, Image, Film } from 'lucide-react';
+import CloudinaryImage from './CloudinaryImage';
 
 interface Category {
   id: string;
@@ -115,10 +116,19 @@ export default function ShootCategories() {
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
-                <div
-                  className="h-80 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                  style={{ backgroundImage: `url(${category.images[0]})` }}
-                />
+                <div className="h-80 transition-transform duration-700 group-hover:scale-110 overflow-hidden">
+                  {category.images[0] ? (
+                    <CloudinaryImage
+                      src={category.images[0]}
+                      alt={category.title}
+                      className="w-full h-full object-cover transform duration-700 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center">
+                      <span className="text-gray-400">Image not available</span>
+                    </div>
+                  )}
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-6 z-20">
                   <div className="flex items-center space-x-3 mb-2">
@@ -178,10 +188,17 @@ export default function ShootCategories() {
                       key={index}
                       className="h-64 rounded-lg overflow-hidden group cursor-pointer"
                     >
-                      <div
-                        className="h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                        style={{ backgroundImage: `url(${image})` }}
-                      />
+                      {image ? (
+                        <CloudinaryImage
+                          src={image}
+                          alt={`${selectedCategory.title} ${index + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center">
+                          <span className="text-gray-400">Image not available</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

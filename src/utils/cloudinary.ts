@@ -1,6 +1,6 @@
 import { Cloudinary } from '@cloudinary/url-gen';
-import { quality } from '@cloudinary/url-gen/actions/delivery';
-import { scale, fill } from '@cloudinary/url-gen/actions/resize';
+import { quality, format } from '@cloudinary/url-gen/actions/delivery';
+import { fill } from '@cloudinary/url-gen/actions/resize';
 
 // Initialize Cloudinary instance
 export const cld = new Cloudinary({
@@ -16,18 +16,22 @@ export const IMAGES = {
 };
 
 // Function to get optimized image URL
-export const getImageUrl = (publicId: string, options?: { width?: number; height?: number; quality?: number }) => {
-  const { width, height, quality = 'auto' } = options || {};
-  let transformation = cld.image(publicId);
+export const getImageUrl = (
+  publicId: string,
+  options?: { width?: number; height?: number; quality?: number | 'auto' }
+) => {
+  const { width, height, quality: q = 'auto' } = options || {};
+  const img = cld.image(publicId).delivery(quality(typeof q === 'number' ? q : 'auto')).delivery(format('auto'));
 
-  if (width || height) {
-    transformation = transformation.resize(`w_${width},h_${height}`);
+  if (width && height) {
+    img.resize(fill().width(width).height(height));
+  } else if (width) {
+    img.resize(fill().width(width));
+  } else if (height) {
+    img.resize(fill().height(height));
   }
 
-  // Set quality and format optimization
-  transformation = transformation.quality(quality).format('auto');
-
-  return transformation.toURL();
+  return img.toURL();
 };
 
 // Upload preset name - create this in your Cloudinary Dashboard
