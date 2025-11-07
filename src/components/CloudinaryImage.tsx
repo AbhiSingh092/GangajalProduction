@@ -8,6 +8,7 @@ interface CloudinaryImageProps {
   width?: number;
   height?: number;
   className?: string;
+  loading?: 'lazy' | 'eager';
 }
 
 function extractPublicIdFromUrl(url: string): string | null {
@@ -35,13 +36,18 @@ export default function CloudinaryImage({
   if (isUrl && src.includes('res.cloudinary.com')) {
     const publicId = extractPublicIdFromUrl(src);
     if (publicId) {
-      const img = cld.image(publicId).delivery(quality('auto')).delivery(format('auto'));
+      const img = cld
+        .image(publicId)
+        .delivery(quality('auto:best'))
+        .delivery(format('auto'))
+        .addTransformation('f_auto,q_auto:best,dpr_auto');
+        
+      // Add responsive sizing if no specific dimensions are provided
       if (width && height) {
         img.resize(fill().width(width).height(height));
-      } else if (width) {
-        img.resize(fill().width(width));
-      } else if (height) {
-        img.resize(fill().height(height));
+      } else {
+        // Default responsive sizing
+        img.addTransformation('w_auto,c_fill');
       }
       imageUrl = img.toURL();
     } else {
@@ -65,7 +71,21 @@ export default function CloudinaryImage({
   }
 
   return (
-    // eslint-disable-next-line jsx-a11y/img-redundant-alt
-    <img src={imageUrl} alt={alt} className={className} loading="lazy" />
+    <img
+      src={imageUrl}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      decoding="async"
+      onError={(e) => {
+        console.error('Image failed to load:', imageUrl);
+        // Set a fallback background color
+        const target = e.target as HTMLImageElement;
+        target.style.backgroundColor = '#1f2937';
+      }}
+      onLoad={() => {
+        console.log('Image loaded successfully:', imageUrl);
+      }}
+    />
   );
 }

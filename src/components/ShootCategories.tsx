@@ -20,17 +20,23 @@ export default function ShootCategories() {
   const loadImages = async () => {
     setIsLoading(true);
     try {
-      console.log('Fetching images for all categories...');
-      const productImages = await fetchImagesByCategory('product');
-      console.log('Product images:', productImages);
-      const fashionImages = await fetchImagesByCategory('fashion');
-      console.log('Fashion images:', fashionImages);
-      const eventImages = await fetchImagesByCategory('event');
-      console.log('Event images:', eventImages);
-      const travelImages = await fetchImagesByCategory('travel');
-      console.log('Travel images:', travelImages);
-      const commercialImages = await fetchImagesByCategory('commercial');
-      console.log('Commercial images:', commercialImages);
+      console.log('Starting image load...');
+      // Fetch all categories in parallel for better performance
+      const [productImages, fashionImages, eventImages, travelImages, commercialImages] = await Promise.all([
+        fetchImagesByCategory('product'),
+        fetchImagesByCategory('fashion'),
+        fetchImagesByCategory('event'),
+        fetchImagesByCategory('travel'),
+        fetchImagesByCategory('commercial')
+      ]);
+
+      console.log('Images loaded:', {
+        product: productImages?.length || 0,
+        fashion: fashionImages?.length || 0,
+        event: eventImages?.length || 0,
+        travel: travelImages?.length || 0,
+        commercial: commercialImages?.length || 0
+      });
 
       setCategoryImages({
         product: productImages,
@@ -41,7 +47,20 @@ export default function ShootCategories() {
       });
     } catch (error) {
       console.error('Error loading images:', error);
+      // Show the error in the UI for testing purposes
+      const errorElement = document.createElement('div');
+      errorElement.style.position = 'fixed';
+      errorElement.style.bottom = '20px';
+      errorElement.style.right = '20px';
+      errorElement.style.backgroundColor = 'red';
+      errorElement.style.color = 'white';
+      errorElement.style.padding = '10px';
+      errorElement.style.borderRadius = '5px';
+      errorElement.textContent = 'Error loading images. Check console for details.';
+      document.body.appendChild(errorElement);
+      setTimeout(() => errorElement.remove(), 5000);
     } finally {
+      console.log('Image loading completed');
       setIsLoading(false);
     }
   };
@@ -51,9 +70,9 @@ export default function ShootCategories() {
     loadImages();
   }, []);
 
-  // Refresh images every 30 seconds
+  // Refresh images every 5 minutes
   useEffect(() => {
-    const intervalId = setInterval(loadImages, 30000);
+    const intervalId = setInterval(loadImages, 300000); // 5 minutes
     return () => clearInterval(intervalId);
   }, []);
 
@@ -66,9 +85,8 @@ export default function ShootCategories() {
       // Paste your product image URLs in this array
       images: [
         // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-image-id',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543840/qiflpbfjbgen4cpeo7v6.jpg',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543952/ugluku07zk14uyl3rtsy.jpg',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543952/ugluku07zk14uyl3rtsy.jpg',
+        
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762544224/bzqkrmqfazwbkyeunrvd.jpg',
         ...categoryImages['product'] || []
       ],
       mediaTypes: [
@@ -83,6 +101,7 @@ export default function ShootCategories() {
       description: 'Elegant fashion photography and captivating portraits',
       // Paste your fashion image URLs in this array
       images: [
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762545092/mcih324jy90hoiebfqcd.jpg',
         // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-fashion-image',
         ...categoryImages['fashion'] || []
       ],
@@ -128,7 +147,14 @@ export default function ShootCategories() {
       title: 'Commercial',
       icon: Briefcase,
       description: 'Professional content for brands and businesses',
-      images: categoryImages['commercial'] || [],
+      // Paste your commercial image URLs in this array
+      images: [
+        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-commercial-image',
+        // Add your commercial image URLs here, for example:
+        // 'https://res.cloudinary.com/dbz9tnzid/image/upload/v1234567890/your-commercial-image1.jpg',
+        // 'https://res.cloudinary.com/dbz9tnzid/image/upload/v1234567890/your-commercial-image2.jpg',
+        ...categoryImages['commercial'] || []
+      ],
       mediaTypes: [
         { type: 'photo', label: 'Commercial Shoots' },
         { type: 'video', label: 'Brand Videos' }
@@ -169,6 +195,7 @@ export default function ShootCategories() {
                     <CloudinaryImage
                       src={category.images[0]}
                       alt={category.title}
+                      width={640}
                       className="w-full h-full object-cover transform duration-700 group-hover:scale-110"
                     />
                   ) : (
