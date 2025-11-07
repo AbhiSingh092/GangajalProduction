@@ -20,9 +20,9 @@ export default function ShootCategories() {
       icon: Camera,
       description: 'Stunning product shots that make your brand stand out',
       images: [
-        'src/pic.jpg',
-        'src/pic2.jpg',
-        'src/pic3.jpg'
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762524478/pmy0vynnyqjavbfvrror.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762524478/pmy0vynnyqjavbfvrror.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762524478/pmy0vynnyqjavbfvrror.jpg'
       ],
       mediaTypes: [
         { type: 'photo', label: 'Product Photos' },
