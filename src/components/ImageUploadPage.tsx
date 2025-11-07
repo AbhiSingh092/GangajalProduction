@@ -39,12 +39,11 @@ export default function ImageUploadPage() {
       for (const file of acceptedFiles) {
         try {
           console.log('Uploading file:', file.name);
-          const url = await uploadImage(file);
+          const result = await uploadImage(file, selectedCategory);
           console.log('Successfully uploaded:', file.name);
           
-          addImageToCategory(selectedCategory, url);
           setUploadedImages(prev => [...prev, {
-            url,
+            url: result.url,
             name: file.name,
             category: selectedCategory
           }]);

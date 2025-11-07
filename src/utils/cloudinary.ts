@@ -38,14 +38,54 @@ export const getImageUrl = (
 // Settings -> Upload -> Upload Presets -> Add upload preset
 export const UPLOAD_PRESET = 'gangajal_preset';
 
+// Function to fetch images by category
+export const fetchImagesByCategory = async (category: string): Promise<string[]> => {
+  try {
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/dbz9tnzid/resources/search`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${btoa('511716395751147:Znm9YeGv9f1z_VZwgc0rnTaycQ8')}`,
+        },
+        body: JSON.stringify({
+          expression: `resource_type:image AND tags=${category}`,
+          sort_by: [{ uploaded_at: 'desc' }],
+          max_results: 500
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch images');
+    }
+
+    const data = await response.json();
+    return data.resources.map((resource: any) => resource.secure_url);
+  } catch (error) {
+    console.error('Error fetching images:', error);
+    return [];
+  }
+};
+
 // Function to upload image to Cloudinary
-export const uploadImage = async (file: File): Promise<string> => {
+interface UploadResult {
+  url: string;
+  publicId: string;
+}
+
+export const uploadImage = async (file: File, category: string): Promise<UploadResult> => {
   console.log('Starting upload for file:', file.name);
   
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', UPLOAD_PRESET);
   formData.append('cloud_name', 'dbz9tnzid');
+  // Add category as a tag
+  formData.append('tags', category);
+  // Add category to context metadata
+  formData.append('context', `category=${category}`);
 
   try {
     console.log('Sending request to Cloudinary...');
@@ -65,8 +105,11 @@ export const uploadImage = async (file: File): Promise<string> => {
     }
 
     const data = await response.json();
-    console.log('Upload successful:', data.secure_url);
-    return data.secure_url;
+    console.log('Upload successful:', data);
+    return {
+      url: data.secure_url,
+      publicId: data.public_id
+    };
   } catch (error) {
     console.error('Upload error:', error);
     throw error;

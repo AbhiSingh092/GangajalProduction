@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Camera, Video, Sparkles, Plane, Briefcase, X, Image, Film } from 'lucide-react';
-import { useCategoryImages } from '../hooks/useCategoryImages';
+import { fetchImagesByCategory } from '../utils/cloudinary';
 import CloudinaryImage from './CloudinaryImage';
 
 interface Category {
@@ -14,7 +14,27 @@ interface Category {
 
 export default function ShootCategories() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const { getImagesForCategory } = useCategoryImages();
+  const [categoryImages, setCategoryImages] = useState<{ [key: string]: string[] }>({});
+
+  useEffect(() => {
+    const loadImages = async () => {
+      const productImages = await fetchImagesByCategory('product');
+      const fashionImages = await fetchImagesByCategory('fashion');
+      const eventImages = await fetchImagesByCategory('event');
+      const travelImages = await fetchImagesByCategory('travel');
+      const commercialImages = await fetchImagesByCategory('commercial');
+
+      setCategoryImages({
+        product: productImages,
+        fashion: fashionImages,
+        event: eventImages,
+        travel: travelImages,
+        commercial: commercialImages
+      });
+    };
+
+    loadImages();
+  }, []);
 
   const categories: Category[] = [
     {
@@ -22,9 +42,7 @@ export default function ShootCategories() {
       title: 'Product Photography',
       icon: Camera,
       description: 'Stunning product shots that make your brand stand out',
-      images: getImagesForCategory('product') || [
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762524478/pmy0vynnyqjavbfvrror.jpg'
-      ],
+      images: categoryImages['product'] || [],
       mediaTypes: [
         { type: 'photo', label: 'Product Photos' },
         { type: 'video', label: '360° Product Videos' }
@@ -35,7 +53,7 @@ export default function ShootCategories() {
       title: 'Fashion & Portrait',
       icon: Sparkles,
       description: 'Elegant fashion photography and captivating portraits',
-      images: getImagesForCategory('fashion') || [],
+      images: categoryImages['fashion'] || [],
       mediaTypes: [
         { type: 'photo', label: 'Fashion Photography' },
         { type: 'video', label: 'Portrait Reels' }
@@ -46,7 +64,7 @@ export default function ShootCategories() {
       title: 'Event Coverage',
       icon: Video,
       description: 'Capturing unforgettable moments at your special events',
-      images: getImagesForCategory('event') || [],
+      images: categoryImages['event'] || [],
       mediaTypes: [
         { type: 'photo', label: 'Event Photography' },
         { type: 'video', label: 'Event Cinematography' }
@@ -57,7 +75,7 @@ export default function ShootCategories() {
       title: 'Travel & Lifestyle',
       icon: Plane,
       description: 'Documenting journeys and authentic lifestyle moments',
-      images: getImagesForCategory('travel') || [],
+      images: categoryImages['travel'] || [],
       mediaTypes: [
         { type: 'photo', label: 'Travel Photography' },
         { type: 'video', label: 'Travel Documentaries' }
@@ -68,7 +86,7 @@ export default function ShootCategories() {
       title: 'Commercial',
       icon: Briefcase,
       description: 'Professional content for brands and businesses',
-      images: getImagesForCategory('commercial') || [],
+      images: categoryImages['commercial'] || [],
       mediaTypes: [
         { type: 'photo', label: 'Commercial Shoots' },
         { type: 'video', label: 'Brand Videos' }
