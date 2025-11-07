@@ -66,6 +66,9 @@ export default function ShootCategories() {
       // Paste your product image URLs in this array
       images: [
         // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-image-id',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543840/qiflpbfjbgen4cpeo7v6.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543952/ugluku07zk14uyl3rtsy.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543952/ugluku07zk14uyl3rtsy.jpg',
         ...categoryImages['product'] || []
       ],
       mediaTypes: [
@@ -111,6 +114,7 @@ export default function ShootCategories() {
       // Paste your travel image URLs in this array
       images: [
         'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543162/cwenbjdzbwu0dm0wgomr.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762543348/z4okyxqav3avbruxvvf2.jpg',
         // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-travel-image',
         ...categoryImages['travel'] || []
       ],
