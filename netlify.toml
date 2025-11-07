@@ -1,0 +1,5 @@
+# Rewrite rules to support client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
