@@ -101,8 +101,11 @@ export default function ShootCategories() {
       description: 'Elegant fashion photography and captivating portraits',
       // Paste your fashion image URLs in this array
       images: [
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762545092/mcih324jy90hoiebfqcd.jpg',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762545478/kilxffw8rf2fzgk5lzms.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795741/nlfthjhsdboulynmemnz.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795837/tciqulmmiqecnaud7jsn.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795863/xujusmvpnc5xmbcn5akh.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795881/nwvloyhj35rr1nybm2ra.jpg',
+        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795902/jpag4bbj2ppbgojiw5ox.jpg',
         // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-fashion-image',
         ...categoryImages['fashion'] || []
       ],
