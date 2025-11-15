@@ -191,7 +191,6 @@ export default function ShootCategories() {
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
                 <div className="h-80 transition-transform duration-700 group-hover:scale-110 overflow-hidden">
-                  {isLoading ? (
                     <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
                       <span className="text-gray-400">Loading...</span>
                     </div>
@@ -202,6 +201,32 @@ export default function ShootCategories() {
                       width={640}
                       className="w-full h-full object-cover transform duration-700 group-hover:scale-110"
                     />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center">
+                      <span className="text-gray-400">Image not available</span>
+                    </div>
+                  )}
+
+                  {isLoading ? (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
+                      <span className="text-gray-400">Loading...</span>
+                    </div>
+                  ) : category.images[0] ? (
+                    category.images[0].match(/\.(mp4|webm|ogg)$/i) ? (
+                      <video
+                        src={category.images[0]}
+                        controls
+                        className="w-full h-full object-cover rounded-2xl"
+                        style={{ background: '#222' }}
+                      />
+                    ) : (
+                      <CloudinaryImage
+                        src={category.images[0]}
+                        alt={category.title}
+                        width={640}
+                        className="w-full h-full object-cover transform duration-700 group-hover:scale-110"
+                      />
+                    )
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center">
                       <span className="text-gray-400">Image not available</span>
@@ -262,7 +287,7 @@ export default function ShootCategories() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {selectedCategory.images.map((image, index) => (
+                  {selectedCategory.images.map((mediaUrl, index) => (
                     <div
                       key={index}
                       className="h-64 rounded-lg overflow-hidden group cursor-pointer"
@@ -271,15 +296,24 @@ export default function ShootCategories() {
                         <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
                           <span className="text-gray-400">Loading...</span>
                         </div>
-                      ) : image ? (
-                        <CloudinaryImage
-                          src={image}
-                          alt={`${selectedCategory.title} ${index + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
+                      ) : mediaUrl ? (
+                        mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                          <video
+                            src={mediaUrl}
+                            controls
+                            className="w-full h-full object-cover rounded-lg"
+                            style={{ background: '#222' }}
+                          />
+                        ) : (
+                          <CloudinaryImage
+                            src={mediaUrl}
+                            alt={`${selectedCategory.title} ${index + 1}`}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        )
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center">
-                          <span className="text-gray-400">Image not available</span>
+                          <span className="text-gray-400">Media not available</span>
                         </div>
                       )}
                     </div>
