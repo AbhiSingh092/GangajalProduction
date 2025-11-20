@@ -50,7 +50,8 @@ export const fetchImagesByCategory = async (category: string): Promise<string[]>
           Authorization: `Basic ${btoa('511716395751147:Znm9YeGv9f1z_VZwgc0rnTaycQ8')}`,
         },
         body: JSON.stringify({
-          expression: `resource_type:image AND tags=${category}`,
+          // Search by tag (works for images and videos). Use 'tags:categoryName' syntax.
+          expression: `tags:${category}`,
           sort_by: [{ uploaded_at: 'desc' }],
           max_results: 500
         }),
@@ -62,7 +63,8 @@ export const fetchImagesByCategory = async (category: string): Promise<string[]>
     }
 
     const data = await response.json();
-    return data.resources.map((resource: any) => resource.secure_url);
+    // Return secure URLs for any media type (image/video)
+    return (data.resources || []).map((resource: any) => resource.secure_url).filter(Boolean);
   } catch (error) {
     console.error('Error fetching images:', error);
     return [];
