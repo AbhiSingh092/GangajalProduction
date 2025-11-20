@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { isAuthenticated, logout } from '../utils/auth';
 import AdminLogin from './AdminLogin';
 import ImageUploadPage from './ImageUploadPage';
+import AdminDashboard from './AdminDashboard';
 
 export default function AdminPortal() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -14,6 +15,8 @@ export default function AdminPortal() {
     logout();
     setIsLoggedIn(false);
   };
+
+  const [tab, setTab] = useState<'upload' | 'manage'>('upload');
 
   if (!isLoggedIn) {
     return <AdminLogin onLoginSuccess={() => setIsLoggedIn(true)} />;
@@ -40,8 +43,16 @@ export default function AdminPortal() {
         </div>
       </div>
 
-      {/* Upload Section */}
-      <ImageUploadPage />
+      <div className="bg-gray-900 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-4 flex gap-3">
+            <button onClick={() => setTab('upload')} className={`px-4 py-2 rounded ${tab === 'upload' ? 'bg-amber-500 text-black' : 'bg-gray-800'}`}>Upload</button>
+            <button onClick={() => setTab('manage')} className={`px-4 py-2 rounded ${tab === 'manage' ? 'bg-amber-500 text-black' : 'bg-gray-800'}`}>Manage</button>
+          </div>
+
+          {tab === 'upload' ? <ImageUploadPage /> : <AdminDashboard />}
+        </div>
+      </div>
     </div>
   );
 }

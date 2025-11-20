@@ -69,6 +69,58 @@ export const fetchImagesByCategory = async (category: string): Promise<string[]>
   }
 };
 
+// Fetch full media resources (with public_id) for admin use
+export const fetchMediaByCategory = async (category: string): Promise<any[]> => {
+  try {
+    const response = await fetch(`https://api.cloudinary.com/v1_1/dbz9tnzid/resources/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${btoa('511716395751147:Znm9YeGv9f1z_VZwgc0rnTaycQ8')}`,
+      },
+      body: JSON.stringify({
+        expression: `tags=${category}`,
+        sort_by: [{ uploaded_at: 'desc' }],
+        max_results: 500
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch media');
+    const data = await response.json();
+    return data.resources || [];
+  } catch (error) {
+    console.error('Error fetching media:', error);
+    return [];
+  }
+};
+
+// Delete resources by public IDs (image/video). Uses Admin API.
+export const deleteResources = async (publicIds: string[], resourceType: 'image' | 'video' = 'image') => {
+  try {
+    // Cloudinary supports bulk delete via DELETE to resources endpoint with public_ids in body
+    const url = `https://api.cloudinary.com/v1_1/dbz9tnzid/resources/${resourceType}/upload`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${btoa('511716395751147:Znm9YeGv9f1z_VZwgc0rnTaycQ8')}`,
+      },
+      body: JSON.stringify({ public_ids: publicIds })
+    });
+
+    if (!response.ok) {
+      const txt = await response.text();
+      throw new Error(`Delete failed: ${response.status} ${txt}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error deleting resources:', error);
+    throw error;
+  }
+};
+
 // Function to upload image to Cloudinary
 interface UploadResult {
   url: string;

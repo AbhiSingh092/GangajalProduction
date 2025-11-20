@@ -84,9 +84,6 @@ export default function ShootCategories() {
       description: 'Stunning product shots that make your brand stand out',
       // Paste your product image URLs in this array
       images: [
-        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-image-id',
-        
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762544224/bzqkrmqfazwbkyeunrvd.jpg',
         ...categoryImages['product'] || []
       ],
       mediaTypes: [
@@ -101,12 +98,6 @@ export default function ShootCategories() {
       description: 'Elegant fashion photography and captivating portraits',
       // Paste your fashion image URLs in this array
       images: [
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795741/nlfthjhsdboulynmemnz.jpg',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795837/tciqulmmiqecnaud7jsn.jpg',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795863/xujusmvpnc5xmbcn5akh.jpg',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795881/nwvloyhj35rr1nybm2ra.jpg',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762795902/jpag4bbj2ppbgojiw5ox.jpg',
-        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-fashion-image',
         ...categoryImages['fashion'] || []
       ],
       mediaTypes: [
@@ -121,7 +112,6 @@ export default function ShootCategories() {
       description: 'Capturing unforgettable moments at your special events',
       // Paste your event image URLs in this array
       images: [
-        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-event-image',
         ...categoryImages['event'] || []
       ],
       mediaTypes: [
@@ -136,9 +126,6 @@ export default function ShootCategories() {
       description: 'Documenting journeys and authentic lifestyle moments',
       // Paste your travel image URLs in this array
       images: [
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762545478/kilxffw8rf2fzgk5lzms.jpg',
-        'https://res.cloudinary.com/dbz9tnzid/image/upload/v1762545478/kilxffw8rf2fzgk5lzms.jpg',
-        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-travel-image',
         ...categoryImages['travel'] || []
       ],
       mediaTypes: [
@@ -153,10 +140,6 @@ export default function ShootCategories() {
       description: 'Professional content for brands and businesses',
       // Paste your commercial image URLs in this array
       images: [
-        // Example: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1234567890/your-commercial-image',
-        // Add your commercial image URLs here, for example:
-        // 'https://res.cloudinary.com/dbz9tnzid/image/upload/v1234567890/your-commercial-image1.jpg',
-        // 'https://res.cloudinary.com/dbz9tnzid/image/upload/v1234567890/your-commercial-image2.jpg',
         ...categoryImages['commercial'] || []
       ],
       mediaTypes: [
@@ -191,22 +174,6 @@ export default function ShootCategories() {
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
                 <div className="h-80 transition-transform duration-700 group-hover:scale-110 overflow-hidden">
-                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
-                      <span className="text-gray-400">Loading...</span>
-                    </div>
-                  ) : category.images[0] ? (
-                    <CloudinaryImage
-                      src={category.images[0]}
-                      alt={category.title}
-                      width={640}
-                      className="w-full h-full object-cover transform duration-700 group-hover:scale-110"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center">
-                      <span className="text-gray-400">Image not available</span>
-                    </div>
-                  )}
-
                   {isLoading ? (
                     <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
                       <span className="text-gray-400">Loading...</span>
