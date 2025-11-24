@@ -1,7 +1,7 @@
 // Upload endpoint - returns upload signature for client-side Cloudinary upload
 import crypto from 'crypto';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -15,7 +15,19 @@ export default function handler(req, res) {
       });
     }
 
-    const { category = 'uncategorized' } = req.body;
+    // Parse request body manually for Vercel
+    let body = {};
+    try {
+      if (req.body && typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else if (req.body && typeof req.body === 'object') {
+        body = req.body;
+      }
+    } catch (e) {
+      console.log('Body parsing failed, using defaults');
+    }
+
+    const { category = 'uncategorized' } = body;
     const timestamp = Math.floor(Date.now() / 1000);
     
     // Create upload signature for Cloudinary

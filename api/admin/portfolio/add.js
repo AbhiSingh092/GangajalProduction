@@ -21,7 +21,7 @@ const validateAdminToken = (req) => {
   return token === 'admin-token-secret';
 };
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method === 'POST') {
     // Validate admin token
     if (!validateAdminToken(req)) {

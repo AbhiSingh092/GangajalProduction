@@ -21,7 +21,7 @@ const validateAdminToken = (req) => {
   return token === 'admin-token-secret';
 };
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   // Validate admin token for all requests
   if (!validateAdminToken(req)) {
     return res.status(401).json({ error: 'Invalid or missing authorization token' });

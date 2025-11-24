@@ -1,7 +1,7 @@
 // Admin login API endpoint
 const ADMIN_PASSWORD = 'Gangajal@2024';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method === 'POST') {
     const { password } = req.body;
     
