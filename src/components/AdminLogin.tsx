@@ -25,7 +25,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
       });
 
       if (!res.ok) {
-        let data = {};
+        let data: any = {};
         try {
           const loginErrorText = await res.text();
           if (loginErrorText.trim()) {

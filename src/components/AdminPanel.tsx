@@ -44,7 +44,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) {
-          let errData = {};
+          let errData: any = {};
           try {
             const loadErrorText = await res.text();
             if (loadErrorText.trim()) {
@@ -109,7 +109,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       });
 
       if (!uploadRes.ok) {
-        let errData = {};
+        let errData: any = {};
         try {
           const uploadErrorText = await uploadRes.text();
           if (uploadErrorText.trim()) {
@@ -146,7 +146,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       });
 
       if (!res.ok) {
-        let errData = {};
+        let errData: any = {};
         try {
           const addErrorText = await res.text();
           if (addErrorText.trim()) {
