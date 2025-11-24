@@ -8,15 +8,15 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import crypto from 'crypto';
 
-// Load .env from server/ directory explicitly
+// Load .env from server/ directory explicitly (for local development)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const envPath = path.join(__dirname, '.env');
 
-// Ensure dotenv loads from the exact server/.env path with override flag
-if (fs.existsSync(envPath)) {
+// Load environment variables - Vercel will use its own env vars
+if (!process.env.VERCEL && fs.existsSync(envPath)) {
   dotenv.config({ path: envPath, override: true });
-} else {
+} else if (!process.env.VERCEL) {
   console.warn(`Warning: ${envPath} not found; using process.env`);
 }
 
@@ -283,6 +283,13 @@ app.get('/api/admin/portfolio', validateAdminToken, (req, res) => {
   res.json(portfolioItems);
 });
 
-app.listen(PORT, () => {
-  console.log(`Cloudinary proxy server listening on http://localhost:${PORT}`);
-});
+// For Vercel serverless deployment
+if (process.env.VERCEL) {
+  // Export the app for Vercel
+  export default app;
+} else {
+  // For local development
+  app.listen(PORT, () => {
+    console.log(`Cloudinary proxy server listening on http://localhost:${PORT}`);
+  });
+}
