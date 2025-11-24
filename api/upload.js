@@ -55,21 +55,23 @@ export default async function handler(req, res) {
     // Create signed upload parameters
     const timestamp = Math.floor(Date.now() / 1000);
     const uploadParams = {
-      timestamp: timestamp,
-      tags: category,
       folder: 'gangajal-portfolio',
-      resource_type: 'auto',
+      tags: category,
+      timestamp: timestamp,
     };
 
-    // Generate signature for secure upload
+    // Generate signature using Cloudinary's exact algorithm
     const sortedParams = Object.keys(uploadParams)
       .sort()
       .map(key => `${key}=${uploadParams[key]}`)
       .join('&');
     
+    const stringToSign = sortedParams + CLOUDINARY_API_SECRET;
+    console.log('String to sign:', stringToSign);
+    
     const signature = crypto
       .createHash('sha1')
-      .update(sortedParams + CLOUDINARY_API_SECRET)
+      .update(stringToSign)
       .digest('hex');
 
     // Prepare form data for Cloudinary
@@ -82,11 +84,10 @@ export default async function handler(req, res) {
     
     cloudinaryForm.append('file', blob);
     cloudinaryForm.append('api_key', CLOUDINARY_API_KEY);
+    cloudinaryForm.append('folder', 'gangajal-portfolio');
+    cloudinaryForm.append('tags', category);
     cloudinaryForm.append('timestamp', timestamp.toString());
     cloudinaryForm.append('signature', signature);
-    cloudinaryForm.append('tags', category);
-    cloudinaryForm.append('folder', 'gangajal-portfolio');
-    cloudinaryForm.append('resource_type', 'auto');
     
     // Upload to Cloudinary
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`;
