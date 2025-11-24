@@ -284,12 +284,12 @@ app.get('/api/admin/portfolio', validateAdminToken, (req, res) => {
 });
 
 // For Vercel serverless deployment
-if (process.env.VERCEL) {
-  // Export the app for Vercel
-  export default app;
-} else {
+if (!process.env.VERCEL) {
   // For local development
   app.listen(PORT, () => {
     console.log(`Cloudinary proxy server listening on http://localhost:${PORT}`);
   });
 }
+
+// Export the app for serverless adapters (Vercel) or tests; top-level export must be static
+export default app;

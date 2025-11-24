@@ -1,2 +1,6 @@
-// Re-export the main server for Vercel API routes
-export { default } from '../server/index.js';
+import app from '../server/index.js';
+
+export default async function handler(req, res) {
+  // Handle all API routes through the Express app
+  return app(req, res);
+}
