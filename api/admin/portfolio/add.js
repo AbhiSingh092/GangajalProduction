@@ -1,15 +1,5 @@
-// Add new portfolio item endpoint
-let portfolioItems = [
-  {
-    id: 1,
-    title: 'Sample Wedding Photography',
-    category: 'event',
-    imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=500&h=400&fit=crop',
-    description: 'Beautiful wedding moments captured',
-    createdAt: new Date().toISOString()
-  }
-];
-let itemIdCounter = 2;
+// Add new portfolio item endpoint - uses main portfolio.js
+import { addPortfolioItem } from '../../portfolio.js';
 
 // Simple token validation
 const validateAdminToken = (req) => {
@@ -28,22 +18,32 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid or missing authorization token' });
     }
 
-    const { title, category, imageUrl, description } = req.body;
+    // Parse request body manually for Vercel
+    let body = {};
+    try {
+      if (req.body && typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else if (req.body && typeof req.body === 'object') {
+        body = req.body;
+      }
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid JSON body' });
+    }
+
+    const { title, category, imageUrl, description } = body;
     
     if (!title || !category || !imageUrl) {
       return res.status(400).json({ error: 'title, category, and imageUrl are required' });
     }
 
-    const newItem = {
-      id: itemIdCounter++,
+    const newItem = addPortfolioItem({
       title,
       category,
       imageUrl,
-      description: description || '',
-      createdAt: new Date().toISOString()
-    };
+      description: description || ''
+    });
 
-    portfolioItems.push(newItem);
+    console.log('[Portfolio Add] Added new item:', newItem);
     return res.status(200).json(newItem);
   } else {
     return res.status(405).json({ error: 'Method not allowed' });
