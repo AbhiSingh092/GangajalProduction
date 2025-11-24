@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Camera, Video, Sparkles, Plane, Briefcase, X, Image, Film } from 'lucide-react';
-import { fetchImagesByCategory } from '../utils/cloudinary';
-import CloudinaryImage from './CloudinaryImage';
+import ImageLightbox from './ImageLightbox';
+import VideoPlayer from './VideoPlayer';
 
 interface Category {
   id: string;
@@ -16,51 +16,62 @@ export default function ShootCategories() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [categoryImages, setCategoryImages] = useState<{ [key: string]: string[] }>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [showLightbox, setShowLightbox] = useState(false);
 
   const loadImages = async () => {
     setIsLoading(true);
     try {
-      console.log('Starting image load...');
-      // Fetch all categories in parallel for better performance
-      const [productImages, fashionImages, eventImages, travelImages, commercialImages] = await Promise.all([
-        fetchImagesByCategory('product'),
-        fetchImagesByCategory('fashion'),
-        fetchImagesByCategory('event'),
-        fetchImagesByCategory('travel'),
-        fetchImagesByCategory('commercial')
-      ]);
-
-      console.log('Images loaded:', {
-        product: productImages?.length || 0,
-        fashion: fashionImages?.length || 0,
-        event: eventImages?.length || 0,
-        travel: travelImages?.length || 0,
-        commercial: commercialImages?.length || 0
+      // Fetch portfolio items from server
+      console.log('[ShootCategories] Fetching portfolio items from /api/portfolio');
+      const res = await fetch('/api/portfolio');
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      
+      // Check if response is actually JSON
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response');
+      }
+      
+      const text = await res.text();
+      if (!text.trim()) {
+        throw new Error('Empty response from server');
+      }
+      
+      const items = JSON.parse(text);
+      console.log('[ShootCategories] Received', items?.length || 0, 'items:', items);
+      
+      // Group items by category
+      const imagesByCategory: { [key: string]: string[] } = {
+        product: [],
+        fashion: [],
+        event: [],
+        travel: [],
+        commercial: []
+      };
+      
+      items.forEach((item: any) => {
+        if (imagesByCategory[item.category]) {
+          imagesByCategory[item.category].push(item.imageUrl);
+        }
       });
-
-      setCategoryImages({
-        product: productImages,
-        fashion: fashionImages,
-        event: eventImages,
-        travel: travelImages,
-        commercial: commercialImages
-      });
+      
+      console.log('[ShootCategories] Grouped images by category:', imagesByCategory);
+      setCategoryImages(imagesByCategory);
     } catch (error) {
-      console.error('Error loading images:', error);
-      // Show the error in the UI for testing purposes
-      const errorElement = document.createElement('div');
-      errorElement.style.position = 'fixed';
-      errorElement.style.bottom = '20px';
-      errorElement.style.right = '20px';
-      errorElement.style.backgroundColor = 'red';
-      errorElement.style.color = 'white';
-      errorElement.style.padding = '10px';
-      errorElement.style.borderRadius = '5px';
-      errorElement.textContent = 'Error loading images. Check console for details.';
-      document.body.appendChild(errorElement);
-      setTimeout(() => errorElement.remove(), 5000);
+      console.error('[ShootCategories] Error loading images:', error);
+      // Fallback to empty arrays on error
+      setCategoryImages({
+        product: [],
+        fashion: [],
+        event: [],
+        travel: [],
+        commercial: []
+      });
     } finally {
-      console.log('Image loading completed');
       setIsLoading(false);
     }
   };
@@ -70,11 +81,44 @@ export default function ShootCategories() {
     loadImages();
   }, []);
 
+  // Listen for admin changes (uploads/deletes) via localStorage key so gallery refreshes automatically
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'bidi:mediaUpdated') {
+        loadImages();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   // Refresh images every 5 minutes
   useEffect(() => {
     const intervalId = setInterval(loadImages, 300000); // 5 minutes
     return () => clearInterval(intervalId);
   }, []);
+
+  const openLightbox = (images: string[], index: number) => {
+    // Filter out videos for lightbox (lightbox is for images only)
+    const imageUrls = images.filter(url => !url.match(/\.(mp4|webm|ogg)$/i));
+    setLightboxImages(imageUrls);
+    setLightboxIndex(index);
+    setShowLightbox(true);
+  };
+
+  const closeLightbox = () => {
+    setShowLightbox(false);
+    setLightboxImages([]);
+    setLightboxIndex(0);
+  };
+
+  const nextImage = () => {
+    setLightboxIndex((prev) => (prev + 1) % lightboxImages.length);
+  };
+
+  const prevImage = () => {
+    setLightboxIndex((prev) => (prev - 1 + lightboxImages.length) % lightboxImages.length);
+  };
 
   const categories: Category[] = [
     {
@@ -156,11 +200,14 @@ export default function ShootCategories() {
           <h2 className="font-playfair text-4xl md:text-5xl font-bold text-white mb-4">
             Our Expertise
           </h2>
+          {/* Refresh button removed for production UI */}
           <div className="w-24 h-1 bg-gradient-to-r from-amber-500 to-amber-600 mx-auto mb-6"></div>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
             From products to portraits, we bring your vision to life with cinematic precision
           </p>
         </div>
+      
+        {/* Debug panel removed from production UI */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {categories.map((category, index) => {
@@ -187,11 +234,10 @@ export default function ShootCategories() {
                         style={{ background: '#222' }}
                       />
                     ) : (
-                      <CloudinaryImage
+                      <img
                         src={category.images[0]}
                         alt={category.title}
-                        width={640}
-                        className="w-full h-full object-cover transform duration-700 group-hover:scale-110"
+                        className="w-full h-full object-cover"
                       />
                     )
                   ) : (
@@ -253,30 +299,39 @@ export default function ShootCategories() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {selectedCategory.images.map((mediaUrl, index) => (
                     <div
                       key={index}
-                      className="h-64 rounded-lg overflow-hidden group cursor-pointer"
+                      className="relative h-64 rounded-xl overflow-hidden group bg-gray-700"
                     >
                       {isLoading ? (
                         <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
-                          <span className="text-gray-400">Loading...</span>
+                          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
                         </div>
                       ) : mediaUrl ? (
                         mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                          <video
+                          <VideoPlayer
                             src={mediaUrl}
-                            controls
-                            className="w-full h-full object-cover rounded-lg"
-                            style={{ background: '#222' }}
+                            title={`${selectedCategory.title} Video ${index + 1}`}
+                            className="w-full h-full"
                           />
                         ) : (
-                          <CloudinaryImage
-                            src={mediaUrl}
-                            alt={`${selectedCategory.title} ${index + 1}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
+                          <div
+                            className="relative w-full h-full cursor-pointer"
+                            onClick={() => openLightbox(selectedCategory.images.filter(url => !url.match(/\.(mp4|webm|ogg)$/i)), selectedCategory.images.filter(url => !url.match(/\.(mp4|webm|ogg)$/i)).indexOf(mediaUrl))}
+                          >
+                            <img
+                              src={mediaUrl}
+                              alt={`${selectedCategory.title} ${index + 1}`}
+                              className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                              <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300">
+                                <Image className="w-6 h-6 text-gray-800" />
+                              </div>
+                            </div>
+                          </div>
                         )
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center">
@@ -286,10 +341,38 @@ export default function ShootCategories() {
                     </div>
                   ))}
                 </div>
+
+                {/* View All Button */}
+                {selectedCategory.images.length > 6 && (
+                  <div className="text-center mt-8">
+                    <button
+                      onClick={() => {
+                        const imageUrls = selectedCategory.images.filter(url => !url.match(/\.(mp4|webm|ogg)$/i));
+                        if (imageUrls.length > 0) {
+                          openLightbox(imageUrls, 0);
+                        }
+                      }}
+                      className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-semibold px-8 py-3 rounded-full transition-all transform hover:scale-105"
+                    >
+                      View All {selectedCategory.images.filter(url => !url.match(/\.(mp4|webm|ogg)$/i)).length} Photos
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Image Lightbox */}
+      {showLightbox && lightboxImages.length > 0 && (
+        <ImageLightbox
+          images={lightboxImages}
+          currentIndex={lightboxIndex}
+          onClose={closeLightbox}
+          onNext={nextImage}
+          onPrev={prevImage}
+        />
       )}
     </section>
   );

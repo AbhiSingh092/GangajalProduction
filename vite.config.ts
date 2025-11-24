@@ -9,7 +9,14 @@ export default defineConfig({
   },
   base: '/',
   server: {
-    historyApiFallback: true
+    // Proxy `/api` requests in dev to the local proxy server to avoid CORS
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+    }
   },
   build: {
     rollupOptions: {

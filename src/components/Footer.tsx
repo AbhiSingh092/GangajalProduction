@@ -1,4 +1,5 @@
-import { Camera, Mail, Phone, MapPin, Instagram, Facebook, Youtube, Twitter } from 'lucide-react';
+import { Camera, Mail, Phone, MapPin, Instagram, Facebook, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
@@ -59,10 +60,19 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-amber-500/20 pt-8 text-center">
-          <p className="text-gray-500 text-sm">
-            © {new Date().getFullYear()} Gangajal Production. All rights reserved. Crafted with passion.
-          </p>
+        <div className="border-t border-amber-500/20 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-gray-500 text-sm">
+              © {new Date().getFullYear()} Gangajal Production. All rights reserved. Crafted with passion.
+            </p>
+            <Link
+              to="/admin"
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg transition-colors duration-300 text-sm font-medium"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Manage</span>
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
