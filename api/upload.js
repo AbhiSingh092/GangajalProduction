@@ -81,11 +81,28 @@ export default async function handler(req, res) {
     const title = fields.title?.[0] || 'Untitled';
     const description = fields.description?.[0] || '';
     
-    // Use UNSIGNED upload (simpler, no signature needed!)
-    // Prepare context metadata
-    const contextData = `title=${title}|description=${description}|category=${category}|uploadDate=${new Date().toISOString()}`;
+    // Use SIGNED upload with minimal parameters (most reliable)
+    
+    // Only sign the bare minimum required parameters
+    const paramsToSign = {
+      timestamp: timestamp
+    };
 
-    // Prepare form data for Cloudinary (unsigned upload)
+    // Generate signature for minimal parameters
+    const paramsString = Object.keys(paramsToSign)
+      .sort()
+      .map(key => `${key}=${paramsToSign[key]}`)
+      .join('&');
+    
+    const stringToSign = paramsString + CLOUDINARY_API_SECRET;
+    console.log('Minimal signature string:', stringToSign);
+    
+    const signature = crypto
+      .createHash('sha1')
+      .update(stringToSign)
+      .digest('hex');
+
+    // Prepare form data for Cloudinary
     const cloudinaryForm = new FormData();
     
     // Read file and create blob
@@ -93,10 +110,18 @@ export default async function handler(req, res) {
     const fileBuffer = fs.readFileSync(uploadedFile.filepath);
     const blob = new Blob([fileBuffer], { type: uploadedFile.mimetype });
     
+    // Basic signed upload with minimal parameters
     cloudinaryForm.append('file', blob);
-    cloudinaryForm.append('upload_preset', 'ml_default'); // Use default unsigned preset
+    cloudinaryForm.append('api_key', CLOUDINARY_API_KEY);
+    cloudinaryForm.append('timestamp', timestamp.toString());
+    cloudinaryForm.append('signature', signature);
+    
+    // Add non-signed parameters (these don't affect signature)
     cloudinaryForm.append('folder', 'gangajal-portfolio');
     cloudinaryForm.append('tags', `${category},portfolio,${title.replace(/\s+/g, '_')}`);
+    
+    // Add context metadata
+    const contextData = `title=${title}|description=${description}|category=${category}|uploadDate=${new Date().toISOString()}`;
     cloudinaryForm.append('context', contextData);
     
     // Upload to Cloudinary
@@ -132,6 +157,15 @@ export default async function handler(req, res) {
 
     const result = await response.json();
     
+    // Validate Cloudinary response
+    if (!result.secure_url || !result.public_id) {
+      console.error('Invalid Cloudinary response:', result);
+      return res.status(500).json({ 
+        error: 'Upload completed but invalid response', 
+        details: 'Cloudinary did not return expected image URL' 
+      });
+    }
+    
     console.log('Upload successful:', {
       public_id: result.public_id,
       secure_url: result.secure_url,
@@ -139,16 +173,16 @@ export default async function handler(req, res) {
       bytes: result.bytes
     });
 
-    // Return formatted response
+    // Return formatted response with validation
     return res.status(200).json({
       secure_url: result.secure_url,
       public_id: result.public_id,
-      resource_type: result.resource_type,
-      format: result.format,
+      resource_type: result.resource_type || 'image',
+      format: result.format || 'unknown',
       width: result.width || 0,
       height: result.height || 0,
-      bytes: result.bytes,
-      created_at: result.created_at
+      bytes: result.bytes || 0,
+      created_at: result.created_at || new Date().toISOString()
     });
 
   } catch (error) {
