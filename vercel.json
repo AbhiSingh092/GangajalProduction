@@ -1,1 +1,18 @@
-{}
+{
+  "functions": {
+    "api/upload.js": {
+      "maxDuration": 30
+    }
+  },
+  "api": {
+    "bodyParser": {
+      "sizeLimit": "50mb"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
+}

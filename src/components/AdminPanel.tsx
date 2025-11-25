@@ -81,13 +81,8 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (10MB limit)
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
-        alert(`File too large! Size: ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum allowed: 10MB. Please compress your image.`);
-        e.target.value = ''; // Clear the input
-        return;
-      }
+      // No file size limit for production use
+      console.log(`Selected file: ${file.name}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
 
       setSelectedFile(file);
       const reader = new FileReader();

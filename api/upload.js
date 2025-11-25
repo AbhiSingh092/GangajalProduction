@@ -95,15 +95,20 @@ export default async function handler(req, res) {
     // Create upload preset name dynamically (Cloudinary accepts any preset name)
     const uploadPresetName = 'gangajal_preset';
     
+    // Normalize category to ensure consistency
+    const normalizedCategory = category.toLowerCase().trim();
+    
     // Try unsigned upload first (no signature required)
     cloudinaryForm.append('file', blob);
     cloudinaryForm.append('upload_preset', uploadPresetName);
     cloudinaryForm.append('folder', 'gangajal-portfolio');
-    cloudinaryForm.append('tags', `${category},portfolio,${title.replace(/\s+/g, '_')}`);
+    cloudinaryForm.append('tags', `${normalizedCategory},portfolio,gangajal,${title.replace(/\s+/g, '_')}`);
     
-    // Add context metadata
-    const contextData = `title=${title}|description=${description}|category=${category}|uploadDate=${new Date().toISOString()}`;
+    // Add context metadata with explicit category
+    const contextData = `title=${title}|description=${description}|category=${normalizedCategory}|uploadDate=${new Date().toISOString()}`;
     cloudinaryForm.append('context', contextData);
+    
+    console.log(`[Upload] Storing with category: "${normalizedCategory}" in both tags and context`);
     
     // Upload to Cloudinary
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`;

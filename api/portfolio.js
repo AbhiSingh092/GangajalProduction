@@ -26,12 +26,14 @@ export const getPortfolioItems = async () => {
     
     console.log('[Cloudinary DB] Searching for images...');
     
-    // Try multiple search expressions to find images
+    // Try multiple search expressions to find images (ordered by reliability)
     const searchExpressions = [
-      'folder:gangajal-portfolio', // Exact folder match
-      'tags:portfolio',            // By portfolio tag
-      'tags:gangajal',            // By any gangajal tag
-      'resource_type:image'        // All images as fallback
+      'folder:gangajal-portfolio',              // Exact folder match
+      'tags:portfolio AND tags:gangajal',       // Both portfolio and gangajal tags
+      'tags:portfolio',                         // By portfolio tag only
+      'tags:gangajal',                         // By gangajal tag only
+      'resource_type:image AND created_at>1month', // Recent images
+      'resource_type:image'                     // All images as final fallback
     ];
 
     let data = null;
@@ -91,22 +93,53 @@ export const getPortfolioItems = async () => {
       const description = context.description || '';
       
       // Robust category detection - check context first, then tags
-      let category = context.category || 'uncategorized';
+      let category = 'uncategorized';
       
-      // If no category in context, look for valid category in tags
-      if (!context.category && resource.tags) {
+      // Primary: Check context category
+      if (context.category) {
+        category = context.category.toLowerCase().trim();
+      }
+      // Fallback: Check tags for valid categories
+      else if (resource.tags && resource.tags.length > 0) {
         const validCategories = ['product', 'fashion', 'event', 'travel', 'commercial'];
-        const foundCategory = resource.tags.find(tag => validCategories.includes(tag));
+        const foundCategory = resource.tags.find(tag => 
+          validCategories.includes(tag.toLowerCase().trim())
+        );
         if (foundCategory) {
-          category = foundCategory;
+          category = foundCategory.toLowerCase().trim();
         }
       }
       
-      console.log(`[Cloudinary DB] Item ${index + 1} category detection:`, {
+      // Normalize category variations - more comprehensive
+      const categoryLower = category.toLowerCase();
+      if (categoryLower.includes('travel') || categoryLower.includes('lifestyle')) {
+        category = 'travel';
+      } else if (categoryLower.includes('commercial') || categoryLower.includes('business')) {
+        category = 'commercial';
+      } else if (categoryLower.includes('product')) {
+        category = 'product';
+      } else if (categoryLower.includes('fashion') || categoryLower.includes('portrait')) {
+        category = 'fashion';
+      } else if (categoryLower.includes('event') || categoryLower.includes('wedding')) {
+        category = 'event';
+      }
+      
+      console.log(`[Cloudinary DB] Item ${index + 1} - "${title}":`, {
+        public_id: resource.public_id,
         contextCategory: context.category,
         tags: resource.tags,
-        finalCategory: category
+        finalCategory: category,
+        isTargetCategory: (category === 'travel' || category === 'commercial') ? '🎯 YES' : 'no'
       });
+      
+      // SPECIAL DEBUG: Alert if travel/commercial items found
+      if (category === 'travel' || category === 'commercial') {
+        console.log(`🔥 FOUND ${category.toUpperCase()} ITEM:`, {
+          title,
+          imageUrl: resource.secure_url,
+          willBeIncluded: 'YES - this should appear on website'
+        });
+      }
       
       const uploadDate = context.uploadDate || resource.created_at;
 

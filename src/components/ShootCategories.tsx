@@ -61,18 +61,29 @@ export default function ShootCategories() {
       items.forEach((item: any) => {
         console.log(`[ShootCategories] Processing item: "${item.title}" - Category: "${item.category}"`);
         
-        if (imagesByCategory[item.category]) {
-          imagesByCategory[item.category].push(item.imageUrl);
-          console.log(`[ShootCategories] ✅ Added "${item.title}" to ${item.category} category`);
+        const itemCategory = item.category?.toLowerCase()?.trim();
+        let targetCategory = null;
+        
+        // Match category more flexibly
+        if (itemCategory === 'product' || itemCategory?.includes('product')) {
+          targetCategory = 'product';
+        } else if (itemCategory === 'fashion' || itemCategory?.includes('fashion') || itemCategory?.includes('portrait')) {
+          targetCategory = 'fashion';
+        } else if (itemCategory === 'event' || itemCategory?.includes('event') || itemCategory?.includes('wedding')) {
+          targetCategory = 'event';
+        } else if (itemCategory === 'travel' || itemCategory?.includes('travel') || itemCategory?.includes('lifestyle')) {
+          targetCategory = 'travel';
+        } else if (itemCategory === 'commercial' || itemCategory?.includes('commercial') || itemCategory?.includes('business')) {
+          targetCategory = 'commercial';
+        }
+        
+        if (targetCategory && imagesByCategory[targetCategory]) {
+          imagesByCategory[targetCategory].push(item.imageUrl);
+          console.log(`[ShootCategories] ✅ Added "${item.title}" to ${targetCategory} category`);
         } else {
-          console.warn(`[ShootCategories] ❌ Unknown category: "${item.category}" for item: "${item.title}"`);
-          
-          // Handle category variations/fixes
-          const normalizedCategory = item.category?.toLowerCase();
-          if (normalizedCategory === 'travel&lifestyle' || normalizedCategory === 'travel_lifestyle') {
-            imagesByCategory['travel'].push(item.imageUrl);
-            console.log(`[ShootCategories] 🔄 Fixed: Added "${item.title}" to travel category`);
-          }
+          console.warn(`[ShootCategories] ❌ Could not categorize: "${item.category}" for item: "${item.title}"`);
+          // Add to uncategorized or first available category as fallback
+          imagesByCategory['product'].push(item.imageUrl);
         }
       });
       
