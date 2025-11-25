@@ -150,7 +150,17 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       // No need for separate portfolio/add call since Cloudinary IS our database
       console.log('[AdminPanel] Upload successful for category:', category);
       console.log('[AdminPanel] Image stored in Cloudinary:', imageUrl);
-      console.log('[AdminPanel] Upload data:', uploadData);
+      console.log('[AdminPanel] Full upload data:', uploadData);
+      
+      // Special debugging for travel and commercial categories
+      if (category === 'travel' || category === 'commercial') {
+        console.log(`[AdminPanel] ✅ ${category.toUpperCase()} category upload completed:`, {
+          title: title,
+          category: category,
+          imageUrl: imageUrl,
+          description: description
+        });
+      }
 
       // Clear form
       setTitle('');
@@ -190,7 +200,11 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('admin_token');
-      console.log('[Delete] Deleting item:', item.public_id);
+      console.log('[Delete] Attempting to delete item:', {
+        title: item.title,
+        public_id: item.public_id,
+        category: item.category
+      });
       
       const res = await fetch('/api/admin/portfolio', {
         method: 'DELETE',
@@ -201,17 +215,34 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         body: JSON.stringify({ public_id: item.public_id })
       });
 
+      console.log('[Delete] Response status:', res.status);
+
       if (!res.ok) {
         const errorText = await res.text();
-        throw new Error(`Failed to delete: ${errorText}`);
+        console.error('[Delete] Error response:', errorText);
+        
+        let errorMessage = 'Unknown error';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.message || errorText;
+        } catch (e) {
+          errorMessage = errorText || `HTTP ${res.status}`;
+        }
+        
+        throw new Error(`Delete failed: ${errorMessage}`);
       }
+
+      const responseText = await res.text();
+      console.log('[Delete] Success response:', responseText);
 
       // Refresh the list from Cloudinary
       await loadItems();
-      setSuccessMessage('✅ Item deleted successfully from portfolio!');
+      setSuccessMessage(`✅ "${item.title}" deleted successfully from portfolio!`);
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
-      alert('Error: ' + (err as Error).message);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('[Delete] Full error:', err);
+      alert('Delete Error: ' + errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -279,9 +310,21 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-amber-500"
                     disabled={isLoading}
                   >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
-                    ))}
+                    {categories.map(cat => {
+                      // Map categories to user-friendly display names
+                      const displayNames = {
+                        'product': 'Product Photography',
+                        'fashion': 'Fashion Photography', 
+                        'event': 'Event Photography',
+                        'travel': 'Travel & Lifestyle',
+                        'commercial': 'Commercial Photography'
+                      };
+                      return (
+                        <option key={cat} value={cat}>
+                          {displayNames[cat as keyof typeof displayNames] || cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 

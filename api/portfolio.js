@@ -147,22 +147,50 @@ export const getPortfolioItems = async () => {
 // Delete function using Cloudinary API
 export const deletePortfolioItem = async (publicId) => {
   try {
+    // Check environment variables
+    const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUD_NAME } = process.env;
+    
+    if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUD_NAME) {
+      throw new Error('Cloudinary credentials not configured for delete operation');
+    }
+
+    console.log(`[Cloudinary DB] Attempting to delete: ${publicId}`);
+    
+    // Use form-data approach for Cloudinary delete (more reliable)
     const deleteUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/destroy`;
-    const auth = Buffer.from(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`).toString('base64');
+    
+    const formData = new FormData();
+    formData.append('public_id', publicId);
+    formData.append('api_key', CLOUDINARY_API_KEY);
+    
+    // Generate timestamp and signature for delete
+    const timestamp = Math.floor(Date.now() / 1000);
+    formData.append('timestamp', timestamp.toString());
+    
+    // Create signature for delete operation
+    const crypto = await import('crypto');
+    const stringToSign = `public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
+    const signature = crypto.createHash('sha1').update(stringToSign).digest('hex');
+    formData.append('signature', signature);
     
     const response = await fetch(deleteUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        public_id: publicId
-      })
+      body: formData
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Cloudinary DB] Delete failed: ${response.status}`, errorText);
+      throw new Error(`Cloudinary delete failed: ${response.status} - ${errorText}`);
+    }
+
     const result = await response.json();
-    console.log(`[Cloudinary DB] Deleted item: ${publicId}`, result);
+    console.log(`[Cloudinary DB] Delete result for ${publicId}:`, result);
+    
+    if (result.result !== 'ok' && result.result !== 'not found') {
+      throw new Error(`Cloudinary delete unsuccessful: ${result.result}`);
+    }
+    
     return result;
 
   } catch (error) {

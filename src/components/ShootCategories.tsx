@@ -59,12 +59,24 @@ export default function ShootCategories() {
       };
       
       items.forEach((item: any) => {
+        console.log(`[ShootCategories] Processing item: "${item.title}" - Category: "${item.category}"`);
+        
         if (imagesByCategory[item.category]) {
           imagesByCategory[item.category].push(item.imageUrl);
+          console.log(`[ShootCategories] ✅ Added "${item.title}" to ${item.category} category`);
+        } else {
+          console.warn(`[ShootCategories] ❌ Unknown category: "${item.category}" for item: "${item.title}"`);
+          
+          // Handle category variations/fixes
+          const normalizedCategory = item.category?.toLowerCase();
+          if (normalizedCategory === 'travel&lifestyle' || normalizedCategory === 'travel_lifestyle') {
+            imagesByCategory['travel'].push(item.imageUrl);
+            console.log(`[ShootCategories] 🔄 Fixed: Added "${item.title}" to travel category`);
+          }
         }
       });
       
-      console.log('[ShootCategories] Grouped images by category:', imagesByCategory);
+      console.log('[ShootCategories] Final grouped images by category:', imagesByCategory);
       setCategoryImages(imagesByCategory);
     } catch (error) {
       console.error('[ShootCategories] Error loading images:', error);
