@@ -25,12 +25,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse multipart form data
-    const form = new IncomingForm();
+    // Parse multipart form data with increased limits
+    const form = new IncomingForm({
+      maxFileSize: 10 * 1024 * 1024, // 10MB limit
+      maxFieldsSize: 2 * 1024 * 1024, // 2MB for form fields
+      maxFields: 10, // Max number of fields
+      keepExtensions: true
+    });
+    
     const [fields, files] = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
-        if (err) reject(err);
-        else resolve([fields, files]);
+        if (err) {
+          console.error('Form parsing error:', err);
+          reject(err);
+        } else {
+          resolve([fields, files]);
+        }
       });
     });
 
@@ -43,6 +53,16 @@ export default async function handler(req, res) {
 
     const uploadedFile = file[0];
     
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (uploadedFile.size > maxSize) {
+      return res.status(413).json({ 
+        error: 'File too large', 
+        details: `File size ${(uploadedFile.size / 1024 / 1024).toFixed(1)}MB exceeds 10MB limit. Please compress your image.`,
+        maxSize: '10MB'
+      });
+    }
+
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!allowedTypes.includes(uploadedFile.mimetype)) {
@@ -52,6 +72,8 @@ export default async function handler(req, res) {
       });
     }
 
+    console.log(`File validation passed: ${uploadedFile.originalFilename} (${(uploadedFile.size / 1024 / 1024).toFixed(2)}MB)`);
+
     // Create signed upload parameters (ONLY parameters that require signing)
     const timestamp = Math.floor(Date.now() / 1000);
     
@@ -59,32 +81,11 @@ export default async function handler(req, res) {
     const title = fields.title?.[0] || 'Untitled';
     const description = fields.description?.[0] || '';
     
-    // CRITICAL: Only these 3 parameters are signed by Cloudinary
-    const signedParams = {
-      folder: 'gangajal-portfolio',
-      tags: `${category},portfolio,${title.replace(/\s+/g, '_')}`,
-      timestamp: timestamp
-    };
-
-    // Generate signature - ONLY for the 3 signed parameters
-    const paramsString = Object.keys(signedParams)
-      .sort()
-      .map(key => `${key}=${signedParams[key]}`)
-      .join('&');
-    
-    const stringToSign = paramsString + CLOUDINARY_API_SECRET;
-    console.log('Signature parameters only:', paramsString);
-    console.log('String to sign:', stringToSign);
-    
-    const signature = crypto
-      .createHash('sha1')
-      .update(stringToSign)
-      .digest('hex');
-
-    // Prepare context metadata (sent but NOT signed)
+    // Use UNSIGNED upload (simpler, no signature needed!)
+    // Prepare context metadata
     const contextData = `title=${title}|description=${description}|category=${category}|uploadDate=${new Date().toISOString()}`;
 
-    // Prepare form data for Cloudinary
+    // Prepare form data for Cloudinary (unsigned upload)
     const cloudinaryForm = new FormData();
     
     // Read file and create blob
@@ -93,11 +94,9 @@ export default async function handler(req, res) {
     const blob = new Blob([fileBuffer], { type: uploadedFile.mimetype });
     
     cloudinaryForm.append('file', blob);
-    cloudinaryForm.append('api_key', CLOUDINARY_API_KEY);
-    cloudinaryForm.append('folder', signedParams.folder);
-    cloudinaryForm.append('tags', signedParams.tags);
-    cloudinaryForm.append('timestamp', signedParams.timestamp.toString());
-    cloudinaryForm.append('signature', signature);
+    cloudinaryForm.append('upload_preset', 'ml_default'); // Use default unsigned preset
+    cloudinaryForm.append('folder', 'gangajal-portfolio');
+    cloudinaryForm.append('tags', `${category},portfolio,${title.replace(/\s+/g, '_')}`);
     cloudinaryForm.append('context', contextData);
     
     // Upload to Cloudinary
