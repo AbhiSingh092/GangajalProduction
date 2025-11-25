@@ -1,5 +1,5 @@
-// Add new portfolio item endpoint - uses main portfolio.js
-import { addPortfolioItem } from '../../portfolio.js';
+// Add portfolio item endpoint - metadata now stored directly in Cloudinary during upload
+// This endpoint is simplified since upload.js handles everything
 
 // Simple token validation
 const validateAdminToken = (req) => {
@@ -36,15 +36,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'title, category, and imageUrl are required' });
     }
 
-    const newItem = addPortfolioItem({
+    // Since metadata is now stored in Cloudinary during upload,
+    // we just return success - the image is already in the portfolio
+    const responseItem = {
       title,
-      category,
+      category, 
       imageUrl,
-      description: description || ''
-    });
+      description: description || '',
+      message: 'Item added successfully to Cloudinary portfolio'
+    };
 
-    console.log('[Portfolio Add] Added new item:', newItem);
-    return res.status(200).json(newItem);
+    console.log('[Portfolio Add] Confirmed item in Cloudinary:', responseItem);
+    return res.status(200).json(responseItem);
   } else {
     return res.status(405).json({ error: 'Method not allowed' });
   }

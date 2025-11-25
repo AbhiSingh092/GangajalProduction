@@ -97,10 +97,12 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
     setIsLoading(true);
     try {
-      // Upload file to get URL first
+      // Upload file with metadata to Cloudinary (permanent storage!)
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('category', category);
+      formData.append('title', title);
+      formData.append('description', description);
 
       console.log('[handleAddItem] Uploading file:', selectedFile.name, selectedFile.type);
       const uploadRes = await fetch('/api/upload', {

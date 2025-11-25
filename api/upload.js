@@ -52,12 +52,18 @@ export default async function handler(req, res) {
       });
     }
 
-    // Create signed upload parameters
+    // Create signed upload parameters with metadata storage
     const timestamp = Math.floor(Date.now() / 1000);
+    
+    // Extract title and description from form data
+    const title = fields.title?.[0] || 'Untitled';
+    const description = fields.description?.[0] || '';
+    
     const uploadParams = {
       folder: 'gangajal-portfolio',
-      tags: category,
+      tags: `${category},portfolio,${title.replace(/\s+/g, '_')}`,
       timestamp: timestamp,
+      context: `title=${title}|description=${description}|category=${category}|uploadDate=${new Date().toISOString()}`,
     };
 
     // Generate signature using Cloudinary's exact algorithm
@@ -67,6 +73,7 @@ export default async function handler(req, res) {
       .join('&');
     
     const stringToSign = sortedParams + CLOUDINARY_API_SECRET;
+    console.log('Uploading with metadata:', { title, description, category });
     console.log('String to sign:', stringToSign);
     
     const signature = crypto
@@ -85,7 +92,8 @@ export default async function handler(req, res) {
     cloudinaryForm.append('file', blob);
     cloudinaryForm.append('api_key', CLOUDINARY_API_KEY);
     cloudinaryForm.append('folder', 'gangajal-portfolio');
-    cloudinaryForm.append('tags', category);
+    cloudinaryForm.append('tags', `${category},portfolio,${title.replace(/\s+/g, '_')}`);
+    cloudinaryForm.append('context', `title=${title}|description=${description}|category=${category}|uploadDate=${new Date().toISOString()}`);
     cloudinaryForm.append('timestamp', timestamp.toString());
     cloudinaryForm.append('signature', signature);
     
