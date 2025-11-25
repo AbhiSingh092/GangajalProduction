@@ -52,34 +52,37 @@ export default async function handler(req, res) {
       });
     }
 
-    // Create signed upload parameters with metadata storage
+    // Create signed upload parameters (ONLY parameters that require signing)
     const timestamp = Math.floor(Date.now() / 1000);
     
     // Extract title and description from form data
     const title = fields.title?.[0] || 'Untitled';
     const description = fields.description?.[0] || '';
     
-    const uploadParams = {
+    // CRITICAL: Only these 3 parameters are signed by Cloudinary
+    const signedParams = {
       folder: 'gangajal-portfolio',
       tags: `${category},portfolio,${title.replace(/\s+/g, '_')}`,
-      timestamp: timestamp,
-      context: `title=${title}|description=${description}|category=${category}|uploadDate=${new Date().toISOString()}`,
+      timestamp: timestamp
     };
 
-    // Generate signature using Cloudinary's exact algorithm
-    const sortedParams = Object.keys(uploadParams)
+    // Generate signature - ONLY for the 3 signed parameters
+    const paramsString = Object.keys(signedParams)
       .sort()
-      .map(key => `${key}=${uploadParams[key]}`)
+      .map(key => `${key}=${signedParams[key]}`)
       .join('&');
     
-    const stringToSign = sortedParams + CLOUDINARY_API_SECRET;
-    console.log('Uploading with metadata:', { title, description, category });
+    const stringToSign = paramsString + CLOUDINARY_API_SECRET;
+    console.log('Signature parameters only:', paramsString);
     console.log('String to sign:', stringToSign);
     
     const signature = crypto
       .createHash('sha1')
       .update(stringToSign)
       .digest('hex');
+
+    // Prepare context metadata (sent but NOT signed)
+    const contextData = `title=${title}|description=${description}|category=${category}|uploadDate=${new Date().toISOString()}`;
 
     // Prepare form data for Cloudinary
     const cloudinaryForm = new FormData();
@@ -91,11 +94,11 @@ export default async function handler(req, res) {
     
     cloudinaryForm.append('file', blob);
     cloudinaryForm.append('api_key', CLOUDINARY_API_KEY);
-    cloudinaryForm.append('folder', 'gangajal-portfolio');
-    cloudinaryForm.append('tags', `${category},portfolio,${title.replace(/\s+/g, '_')}`);
-    cloudinaryForm.append('context', `title=${title}|description=${description}|category=${category}|uploadDate=${new Date().toISOString()}`);
-    cloudinaryForm.append('timestamp', timestamp.toString());
+    cloudinaryForm.append('folder', signedParams.folder);
+    cloudinaryForm.append('tags', signedParams.tags);
+    cloudinaryForm.append('timestamp', signedParams.timestamp.toString());
     cloudinaryForm.append('signature', signature);
+    cloudinaryForm.append('context', contextData);
     
     // Upload to Cloudinary
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`;
