@@ -28,57 +28,67 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
   const categories = ['product', 'fashion', 'event', 'travel', 'commercial'];
 
+  // Load portfolio items function (accessible throughout component)
+  const loadItems = async () => {
+    setIsLoadingItems(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      if (!token) {
+        setLoadError('No authentication token found');
+        setIsLoadingItems(false);
+        return;
+      }
+      console.log('[AdminPanel] Loading portfolio items from Cloudinary...');
+      const res = await fetch('/api/admin/portfolio', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        let errData: any = {};
+        try {
+          const loadErrorText = await res.text();
+          if (loadErrorText.trim()) {
+            errData = JSON.parse(loadErrorText);
+          }
+        } catch (e) {
+          console.warn('Failed to parse error response:', e);
+        }
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+      
+      const loadResponseText = await res.text();
+      if (!loadResponseText.trim()) {
+        throw new Error('Empty response from server');
+      }
+      const data = JSON.parse(loadResponseText);
+      console.log('[AdminPanel] Loaded from Cloudinary:', data.length, 'items');
+      setItems(Array.isArray(data) ? data : []);
+      setLoadError('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load items from Cloudinary';
+      console.error('[AdminPanel] Load error:', message);
+      setLoadError(message);
+      setItems([]);
+    } finally {
+      setIsLoadingItems(false);
+    }
+  };
+
   // Load portfolio items on mount
   useEffect(() => {
-    const loadItems = async () => {
-      setIsLoadingItems(true);
-      try {
-        const token = localStorage.getItem('admin_token');
-        if (!token) {
-          setLoadError('No authentication token found');
-          setIsLoadingItems(false);
-          return;
-        }
-        console.log('[AdminPanel] Fetching items with token:', token.substring(0, 10) + '...');
-        const res = await fetch('/api/admin/portfolio', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) {
-          let errData: any = {};
-          try {
-            const loadErrorText = await res.text();
-            if (loadErrorText.trim()) {
-              errData = JSON.parse(loadErrorText);
-            }
-          } catch (e) {
-            console.warn('Failed to parse error response:', e);
-          }
-          throw new Error(errData.error || `HTTP ${res.status}`);
-        }
-        
-        const loadResponseText = await res.text();
-        if (!loadResponseText.trim()) {
-          throw new Error('Empty response from server');
-        }
-        const data = JSON.parse(loadResponseText);
-        console.log('[AdminPanel] Fetched items:', data);
-        setItems(Array.isArray(data) ? data : []);
-        setLoadError('');
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load items';
-        console.error('Failed to load items:', message);
-        setLoadError(message);
-        setItems([]);
-      } finally {
-        setIsLoadingItems(false);
-      }
-    };
     loadItems();
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert(`File too large! Size: ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum allowed: 10MB. Please compress your image.`);
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
       setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -136,43 +146,33 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       
       const imageUrl = uploadData.secure_url;
 
-      // Now add portfolio item
-      const token = localStorage.getItem('admin_token');
-      const res = await fetch('/api/admin/portfolio/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ title, category, imageUrl, description })
-      });
+      // Success! Image with metadata is already stored in Cloudinary
+      // No need for separate portfolio/add call since Cloudinary IS our database
+      console.log('[AdminPanel] Upload successful, image stored in Cloudinary:', imageUrl);
 
-      if (!res.ok) {
-        let errData: any = {};
-        try {
-          const addErrorText = await res.text();
-          if (addErrorText.trim()) {
-            errData = JSON.parse(addErrorText);
-          }
-        } catch (e) {
-          console.warn('Failed to parse add item error response:', e);
-        }
-        throw new Error(errData.error || `Failed to add item: HTTP ${res.status}`);
-      }
-
-      const addResponseText = await res.text();
-      if (!addResponseText.trim()) {
-        throw new Error('Empty response from server when adding item');
-      }
-      const newItem = JSON.parse(addResponseText);
-      setItems([newItem, ...items]);
+      // Clear form
       setTitle('');
       setSelectedFile(null);
       setFilePreview('');
       setDescription('');
       if (fileInputRef.current) fileInputRef.current.value = '';
-      setSuccessMessage('Portfolio item added successfully!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      // Refresh the items list from Cloudinary
+      await loadItems();
+      
+      // Force refresh the main website cache (for production)
+      try {
+        // Trigger a cache refresh on the main portfolio API
+        fetch('/api/portfolio', { 
+          method: 'GET',
+          headers: { 'Cache-Control': 'no-cache' }
+        }).catch(() => {}); // Silent fail - this is just for cache refresh
+      } catch (e) {
+        // Silent fail - cache refresh is optional
+      }
+      
+      setSuccessMessage(`✅ Image uploaded successfully! "${title}" is now live on your portfolio website.`);
+      setTimeout(() => setSuccessMessage(''), 5000);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       console.error('[handleAddItem] Error:', message);

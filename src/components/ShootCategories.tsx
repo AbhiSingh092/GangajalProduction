@@ -23,9 +23,14 @@ export default function ShootCategories() {
   const loadImages = async () => {
     setIsLoading(true);
     try {
-      // Fetch portfolio items from server
+      // Fetch portfolio items from server with cache-busting for production
       console.log('[ShootCategories] Fetching portfolio items from /api/portfolio');
-      const res = await fetch('/api/portfolio');
+      const res = await fetch('/api/portfolio?' + new Date().getTime(), {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
