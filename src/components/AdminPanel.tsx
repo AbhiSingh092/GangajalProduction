@@ -148,7 +148,9 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
       // Success! Image with metadata is already stored in Cloudinary
       // No need for separate portfolio/add call since Cloudinary IS our database
-      console.log('[AdminPanel] Upload successful, image stored in Cloudinary:', imageUrl);
+      console.log('[AdminPanel] Upload successful for category:', category);
+      console.log('[AdminPanel] Image stored in Cloudinary:', imageUrl);
+      console.log('[AdminPanel] Upload data:', uploadData);
 
       // Clear form
       setTitle('');
@@ -182,21 +184,31 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     }
   };
 
-  const handleDeleteItem = async (id: number) => {
-    if (!confirm('Delete this portfolio item?')) return;
+  const handleDeleteItem = async (item: any) => {
+    if (!confirm(`Delete "${item.title}"? This will permanently remove it from Cloudinary.`)) return;
 
     setIsLoading(true);
     try {
       const token = localStorage.getItem('admin_token');
-      const res = await fetch(`/api/admin/portfolio/${id}`, {
+      console.log('[Delete] Deleting item:', item.public_id);
+      
+      const res = await fetch('/api/admin/portfolio', {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ public_id: item.public_id })
       });
 
-      if (!res.ok) throw new Error('Failed to delete item');
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to delete: ${errorText}`);
+      }
 
-      setItems(items.filter(item => item.id !== id));
-      setSuccessMessage('Item deleted successfully!');
+      // Refresh the list from Cloudinary
+      await loadItems();
+      setSuccessMessage('✅ Item deleted successfully from portfolio!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
       alert('Error: ' + (err as Error).message);
@@ -346,7 +358,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                         )}
                       </div>
                       <button
-                        onClick={() => handleDeleteItem(item.id)}
+                        onClick={() => handleDeleteItem(item)}
                         disabled={isLoading}
                         className="text-red-400 hover:text-red-300 disabled:text-gray-600 transition-colors"
                       >

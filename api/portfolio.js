@@ -85,11 +85,29 @@ export const getPortfolioItems = async () => {
         context: resource.context
       });
 
-      // Parse context metadata
+      // Parse context metadata with enhanced category detection
       const context = resource.context || {};
       const title = context.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
       const description = context.description || '';
-      const category = context.category || (resource.tags?.find(tag => tag !== 'portfolio') || 'uncategorized');
+      
+      // Robust category detection - check context first, then tags
+      let category = context.category || 'uncategorized';
+      
+      // If no category in context, look for valid category in tags
+      if (!context.category && resource.tags) {
+        const validCategories = ['product', 'fashion', 'event', 'travel', 'commercial'];
+        const foundCategory = resource.tags.find(tag => validCategories.includes(tag));
+        if (foundCategory) {
+          category = foundCategory;
+        }
+      }
+      
+      console.log(`[Cloudinary DB] Item ${index + 1} category detection:`, {
+        contextCategory: context.category,
+        tags: resource.tags,
+        finalCategory: category
+      });
+      
       const uploadDate = context.uploadDate || resource.created_at;
 
       return {
