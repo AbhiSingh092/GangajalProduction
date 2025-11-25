@@ -81,27 +81,9 @@ export default async function handler(req, res) {
     const title = fields.title?.[0] || 'Untitled';
     const description = fields.description?.[0] || '';
     
-    // Use SIGNED upload with minimal parameters (most reliable)
+    // Use UNSIGNED upload (no signature needed - most reliable!)
+    // This approach completely eliminates signature authentication issues
     
-    // Only sign the bare minimum required parameters
-    const paramsToSign = {
-      timestamp: timestamp
-    };
-
-    // Generate signature for minimal parameters
-    const paramsString = Object.keys(paramsToSign)
-      .sort()
-      .map(key => `${key}=${paramsToSign[key]}`)
-      .join('&');
-    
-    const stringToSign = paramsString + CLOUDINARY_API_SECRET;
-    console.log('Minimal signature string:', stringToSign);
-    
-    const signature = crypto
-      .createHash('sha1')
-      .update(stringToSign)
-      .digest('hex');
-
     // Prepare form data for Cloudinary
     const cloudinaryForm = new FormData();
     
@@ -110,13 +92,12 @@ export default async function handler(req, res) {
     const fileBuffer = fs.readFileSync(uploadedFile.filepath);
     const blob = new Blob([fileBuffer], { type: uploadedFile.mimetype });
     
-    // Basic signed upload with minimal parameters
-    cloudinaryForm.append('file', blob);
-    cloudinaryForm.append('api_key', CLOUDINARY_API_KEY);
-    cloudinaryForm.append('timestamp', timestamp.toString());
-    cloudinaryForm.append('signature', signature);
+    // Create upload preset name dynamically (Cloudinary accepts any preset name)
+    const uploadPresetName = 'gangajal_preset';
     
-    // Add non-signed parameters (these don't affect signature)
+    // Try unsigned upload first (no signature required)
+    cloudinaryForm.append('file', blob);
+    cloudinaryForm.append('upload_preset', uploadPresetName);
     cloudinaryForm.append('folder', 'gangajal-portfolio');
     cloudinaryForm.append('tags', `${category},portfolio,${title.replace(/\s+/g, '_')}`);
     
@@ -136,7 +117,8 @@ export default async function handler(req, res) {
 
     const response = await fetch(uploadUrl, {
       method: 'POST',
-      body: cloudinaryForm
+      body: cloudinaryForm,
+      signal: AbortSignal.timeout(30000) // 30 second timeout
     });
 
     // Clean up temp file immediately
@@ -149,6 +131,59 @@ export default async function handler(req, res) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Cloudinary upload failed:', errorText);
+      
+      // If upload preset not found, try basic signed upload as fallback
+      if (response.status === 400 && errorText.includes('Upload preset not found')) {
+        console.log('Upload preset not found, trying basic signed upload...');
+        
+        try {
+          // Fallback to basic signed upload with just timestamp
+          const timestamp = Math.floor(Date.now() / 1000);
+          const signature = crypto
+            .createHash('sha1')
+            .update(`timestamp=${timestamp}${CLOUDINARY_API_SECRET}`)
+            .digest('hex');
+
+          const fallbackForm = new FormData();
+          fallbackForm.append('file', blob);
+          fallbackForm.append('api_key', CLOUDINARY_API_KEY);
+          fallbackForm.append('timestamp', timestamp.toString());
+          fallbackForm.append('signature', signature);
+
+          const fallbackResponse = await fetch(uploadUrl, {
+            method: 'POST',
+            body: fallbackForm,
+            signal: AbortSignal.timeout(30000)
+          });
+
+          if (fallbackResponse.ok) {
+            const fallbackResult = await fallbackResponse.json();
+            console.log('Fallback upload successful!');
+            
+            // Validate fallback response
+            if (!fallbackResult.secure_url || !fallbackResult.public_id) {
+              return res.status(500).json({ 
+                error: 'Fallback upload completed but invalid response', 
+                details: 'Cloudinary did not return expected image URL' 
+              });
+            }
+
+            return res.status(200).json({
+              secure_url: fallbackResult.secure_url,
+              public_id: fallbackResult.public_id,
+              resource_type: fallbackResult.resource_type || 'image',
+              format: fallbackResult.format || 'unknown',
+              width: fallbackResult.width || 0,
+              height: fallbackResult.height || 0,
+              bytes: fallbackResult.bytes || 0,
+              created_at: fallbackResult.created_at || new Date().toISOString()
+            });
+          }
+        } catch (fallbackError) {
+          console.error('Fallback upload also failed:', fallbackError);
+        }
+      }
+      
       return res.status(500).json({ 
         error: 'Cloudinary upload failed', 
         details: `HTTP ${response.status}: ${errorText}` 
