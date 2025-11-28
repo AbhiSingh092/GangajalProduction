@@ -6,15 +6,7 @@ const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUDINARY_CLOUD_NAME } = pro
 // Helper function to fetch portfolio from Cloudinary
 export const getPortfolioItems = async () => {
   try {
-    console.log('[Portfolio] Environment check:', {
-      hasApiKey: !!CLOUDINARY_API_KEY,
-      hasApiSecret: !!CLOUDINARY_API_SECRET,  
-      hasCloudName: !!CLOUDINARY_CLOUD_NAME,
-      cloudName: CLOUDINARY_CLOUD_NAME
-    });
-    
     if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUDINARY_CLOUD_NAME) {
-      console.error('[Portfolio] ❌ Missing Cloudinary credentials!');
       throw new Error('Cloudinary credentials not configured');
     }
 
@@ -38,16 +30,10 @@ export const getPortfolioItems = async () => {
 
       if (response.ok) {
         data = await response.json();
-        console.log(`[Cloudinary DB] ✅ Retrieved ${data.resources?.length || 0} total images`);
+
         
-        // Get ALL images - don't filter, show everything
+        // Get ALL images from Cloudinary
         if (data.resources) {
-          console.log(`[Cloudinary DB] 📁 Found ${data.resources.length} total images`);
-          console.log('[Cloudinary DB] Sample images:', data.resources.slice(0, 3).map(r => ({
-            public_id: r.public_id,
-            tags: r.tags,
-            folder: r.folder
-          })));
           
           // Debug recent uploads
           const recentUploads = portfolioImages.filter(r => {
@@ -69,12 +55,7 @@ export const getPortfolioItems = async () => {
           }
         }
       } else {
-        console.error(`[Cloudinary DB] ❌ List API failed: ${response.status}`);
-        const errorText = await response.text();
-        console.error('[Cloudinary DB] Error details:', errorText);
-        
         // Try simpler API call as backup
-        console.log('[Cloudinary DB] Trying backup API call...');
         const backupUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/image`;
         const backupResponse = await fetch(backupUrl, {
           headers: { 'Authorization': `Basic ${auth}` }
@@ -82,86 +63,43 @@ export const getPortfolioItems = async () => {
         
         if (backupResponse.ok) {
           data = await backupResponse.json();
-          console.log(`[Cloudinary DB] ✅ Backup API found ${data.resources?.length || 0} images`);
         }
       }
     } catch (listError) {
-      console.error('[Cloudinary DB] List API error:', listError.message);
+      throw new Error('Failed to retrieve images from Cloudinary');
     }
 
     if (!data || !data.resources || data.resources.length === 0) {
-      console.log('[Cloudinary DB] ⚠️  No portfolio images found in Cloudinary');
-      console.log('[Cloudinary DB] This could mean:');
-      console.log('- No images have been uploaded yet');
-      console.log('- Images are missing portfolio/gangajal tags');
-      console.log('- Images are not in gangajal-portfolio folder');
       return [];
     }
 
-    console.log(`[Cloudinary DB] ✅ Found ${data.resources.length} portfolio images`);
-    console.log(`[Cloudinary DB] Processing images into portfolio format...`);
-    
     // Transform Cloudinary data to portfolio format
     const portfolioItems = data.resources.map((resource, index) => {
-      console.log(`[Cloudinary DB] Processing image ${index + 1}:`, {
-        public_id: resource.public_id,
-        tags: resource.tags,
-        context: resource.context
-      });
 
       // Parse context metadata with enhanced category detection
       const context = resource.context || {};
       const title = context.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
       const description = context.description || '';
       
-      console.log(`[Cloudinary DB] Item "${title}" context:`, context);
-      console.log(`[Cloudinary DB] Item "${title}" tags:`, resource.tags);
+      // Extract category from tags (first tag is always the category from upload)
+      let category = 'product';
       
-      // Category detection - prioritize context, then tags
-      let category = 'uncategorized';
-      
-      // Primary: Check context category (from upload)
-      if (context.category) {
-        category = context.category.toLowerCase().trim();
-        console.log(`[Cloudinary DB] Found context category: "${category}"`);
-      }
-      // Fallback: Check tags for valid categories  
-      else if (resource.tags && resource.tags.length > 0) {
-        console.log(`[Cloudinary DB] No context category, checking tags:`, resource.tags);
+      if (resource.tags && resource.tags.length > 0) {
+        // First tag is the category from upload API
+        const firstTag = resource.tags[0].toLowerCase().trim();
         const validCategories = ['product', 'fashion', 'event', 'travel', 'commercial'];
-        const foundCategory = resource.tags.find(tag => 
-          validCategories.includes(tag.toLowerCase().trim())
-        );
-        if (foundCategory) {
-          category = foundCategory.toLowerCase().trim();
-          console.log(`[Cloudinary DB] Found tag category: "${category}"`);
+        
+        if (validCategories.includes(firstTag)) {
+          category = firstTag;
         } else {
-          // Default to product only if no category found anywhere
-          category = 'product';
-          console.log(`[Cloudinary DB] No valid category found, defaulting to product`);
+          // Check context as backup
+          if (context.category && validCategories.includes(context.category.toLowerCase())) {
+            category = context.category.toLowerCase();
+          }
         }
-      } else {
-        // No context, no tags - default to product
-        category = 'product';
-        console.log(`[Cloudinary DB] No context or tags, defaulting to product`);
       }
       
-      console.log(`[Cloudinary DB] Item ${index + 1} - "${title}":`, {
-        public_id: resource.public_id,
-        contextCategory: context.category,
-        tags: resource.tags,
-        finalCategory: category,
-        isTargetCategory: (category === 'travel' || category === 'commercial') ? '🎯 YES' : 'no'
-      });
-      
-      // SPECIAL DEBUG: Alert if travel/commercial items found
-      if (category === 'travel' || category === 'commercial') {
-        console.log(`🔥 FOUND ${category.toUpperCase()} ITEM:`, {
-          title,
-          imageUrl: resource.secure_url,
-          willBeIncluded: 'YES - this should appear on website'
-        });
-      }
+
       
       const uploadDate = context.uploadDate || resource.created_at;
 

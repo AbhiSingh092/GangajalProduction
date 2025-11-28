@@ -108,10 +108,6 @@ export default async function handler(req, res) {
     const contextData = `title=${title}|description=${description}|category=${normalizedCategory}|uploadDate=${new Date().toISOString()}`;
     cloudinaryForm.append('context', contextData);
     
-    console.log(`[Upload] Storing with category: \"${normalizedCategory}\" in both tags and context`);
-    console.log('[Upload] Context data:', contextData);
-    console.log('[Upload] Tags:', `${normalizedCategory},portfolio,gangajal,${title.replace(/\s+/g, '_')}`);
-    
     // Upload to Cloudinary
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
     
