@@ -86,29 +86,27 @@ export const getPortfolioItems = async () => {
       const title = context.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
       const description = context.description || '';
       
-      // Extract category from tags (first tag is always the category from upload)
+      // Extract category - check context first (most reliable), then tags
       let category = 'product';
       
-      console.log(`[Portfolio] Image "${title}" - Tags:`, resource.tags, 'Context:', context.category);
-      
-      if (resource.tags && resource.tags.length > 0) {
-        // First tag is the category from upload API
-        const firstTag = resource.tags[0].toLowerCase().trim();
-        const validCategories = ['product', 'fashion', 'event', 'travel', 'commercial'];
-        
-        console.log(`[Portfolio] First tag: "${firstTag}", Valid: ${validCategories.includes(firstTag)}`);
-        
-        if (validCategories.includes(firstTag)) {
-          category = firstTag;
-        } else {
-          // Check context as backup
-          if (context.category && validCategories.includes(context.category.toLowerCase())) {
-            category = context.category.toLowerCase();
-          }
+      // Priority 1: Check context.category (set during upload)
+      if (context.category) {
+        const contextCategory = context.category.toLowerCase().trim();
+        if (['commercial', 'travel', 'fashion', 'event', 'product'].includes(contextCategory)) {
+          category = contextCategory;
         }
       }
       
-      console.log(`[Portfolio] Final category for "${title}": ${category}`);
+      // Priority 2: If no context category, check tags
+      if (category === 'product' && resource.tags && resource.tags.length > 0) {
+        for (const tag of resource.tags) {
+          const tagLower = tag.toLowerCase().trim();
+          if (['commercial', 'travel', 'fashion', 'event'].includes(tagLower)) {
+            category = tagLower;
+            break;
+          }
+        }
+      }
       
 
       
