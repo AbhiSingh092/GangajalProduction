@@ -81,11 +81,18 @@ export const getPortfolioItems = async () => {
     // Transform Cloudinary data to portfolio format
     const portfolioItems = data.resources.map((resource, index) => {
 
+      // DEBUG: Log what Cloudinary is actually returning
+      console.log(`[DEBUG] Resource for "${resource.public_id}":`, {
+        context: resource.context,
+        contextType: typeof resource.context,
+        tags: resource.tags
+      });
+      
       // Parse context metadata - Cloudinary stores context as string, need to parse it
       let parsedContext = {};
       
       if (resource.context && typeof resource.context === 'string') {
-        // Parse context string like "title=Test|description=Desc|category=commercial"
+        console.log(`[DEBUG] Parsing context string:`, resource.context);
         const contextPairs = resource.context.split('|');
         contextPairs.forEach(pair => {
           const [key, value] = pair.split('=');
@@ -93,34 +100,38 @@ export const getPortfolioItems = async () => {
             parsedContext[key.trim()] = value.trim();
           }
         });
+        console.log(`[DEBUG] Parsed context:`, parsedContext);
       } else if (resource.context && typeof resource.context === 'object') {
         parsedContext = resource.context;
+        console.log(`[DEBUG] Context is object:`, parsedContext);
       }
       
       const title = parsedContext.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
       const description = parsedContext.description || '';
       
-      // Extract category - check parsed context first, then tags
+      // Extract category - use TAGS as primary (they're more reliable than context)
       let category = 'product';
       
-      // Priority 1: Check parsed context category (set during upload)
-      if (parsedContext.category) {
-        const contextCategory = parsedContext.category.toLowerCase().trim();
-        if (['commercial', 'travel', 'fashion', 'event', 'product'].includes(contextCategory)) {
-          category = contextCategory;
+      // Priority 1: Check tags first (first tag is the category)
+      if (resource.tags && resource.tags.length > 0) {
+        console.log(`[DEBUG] Checking tags:`, resource.tags);
+        const firstTag = resource.tags[0].toLowerCase().trim();
+        if (['commercial', 'travel', 'fashion', 'event', 'product'].includes(firstTag)) {
+          category = firstTag;
+          console.log(`[DEBUG] Found category in first tag: ${firstTag}`);
         }
       }
       
-      // Priority 2: If no context category, check tags
-      if (category === 'product' && resource.tags && resource.tags.length > 0) {
-        for (const tag of resource.tags) {
-          const tagLower = tag.toLowerCase().trim();
-          if (['commercial', 'travel', 'fashion', 'event'].includes(tagLower)) {
-            category = tagLower;
-            break;
-          }
+      // Priority 2: If no valid category in tags, check parsed context
+      if (category === 'product' && parsedContext.category) {
+        const contextCategory = parsedContext.category.toLowerCase().trim();
+        if (['commercial', 'travel', 'fashion', 'event'].includes(contextCategory)) {
+          category = contextCategory;
+          console.log(`[DEBUG] Found category in context: ${contextCategory}`);
         }
       }
+      
+      console.log(`[DEBUG] Final category for "${title}": ${category}`);
       
 
       
