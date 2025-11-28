@@ -6,7 +6,14 @@ const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUDINARY_CLOUD_NAME } = pro
 // Helper function to fetch portfolio from Cloudinary
 export const getPortfolioItems = async () => {
   try {
-    if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUD_NAME) {
+    console.log('[Portfolio] Environment check:', {
+      hasApiKey: !!CLOUDINARY_API_KEY,
+      hasApiSecret: !!CLOUDINARY_API_SECRET,
+      hasCloudName: !!CLOUDINARY_CLOUD_NAME,
+      cloudName: CLOUDINARY_CLOUD_NAME
+    });
+    
+    if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUDINARY_CLOUD_NAME) {
       console.log('Using sample data - Cloudinary credentials not configured');
       return [
         {
@@ -158,13 +165,13 @@ export const getPortfolioItems = async () => {
       const uploadDate = context.uploadDate || resource.created_at;
 
       return {
-        id: resource.asset_id || resource.public_id.split('/').pop(),
+        id: index + 1, // Numeric ID as expected by admin panel
         title,
         category,
         imageUrl: resource.secure_url,
         description,
         createdAt: uploadDate,
-        public_id: resource.public_id,
+        public_id: resource.public_id, // Keep for delete operations
         format: resource.format,
         width: resource.width,
         height: resource.height,

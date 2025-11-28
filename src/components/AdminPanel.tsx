@@ -39,12 +39,16 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         return;
       }
       console.log('[AdminPanel] Loading portfolio items from Cloudinary...');
+      console.log('[AdminPanel] Using token:', token ? 'Token found' : 'No token');
       const res = await fetch('/api/admin/portfolio?' + Date.now(), {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Cache-Control': 'no-cache'
         }
       });
+      
+      console.log('[AdminPanel] Response status:', res.status);
+      console.log('[AdminPanel] Response ok:', res.ok);
       if (!res.ok) {
         let errData: any = {};
         try {

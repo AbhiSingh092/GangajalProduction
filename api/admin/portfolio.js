@@ -19,12 +19,20 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
+      console.log('[Admin Portfolio] Loading portfolio items...');
       // Get all portfolio items from Cloudinary
       const items = await getPortfolioItems();
+      console.log(`[Admin Portfolio] Retrieved ${items?.length || 0} items`);
+      console.log('[Admin Portfolio] Items preview:', items?.slice(0, 2).map(item => ({
+        title: item.title,
+        category: item.category,
+        hasImageUrl: !!item.imageUrl
+      })));
       return res.status(200).json(items);
     } catch (error) {
       console.error('[Admin Portfolio] Error loading items:', error);
-      return res.status(500).json({ error: 'Failed to load portfolio items' });
+      console.error('[Admin Portfolio] Error details:', error.message);
+      return res.status(500).json({ error: 'Failed to load portfolio items', details: error.message });
     }
   } 
   else if (req.method === 'DELETE') {
