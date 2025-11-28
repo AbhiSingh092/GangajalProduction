@@ -81,17 +81,31 @@ export const getPortfolioItems = async () => {
     // Transform Cloudinary data to portfolio format
     const portfolioItems = data.resources.map((resource, index) => {
 
-      // Parse context metadata with enhanced category detection
-      const context = resource.context || {};
-      const title = context.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
-      const description = context.description || '';
+      // Parse context metadata - Cloudinary stores context as string, need to parse it
+      let parsedContext = {};
       
-      // Extract category - check context first (most reliable), then tags
+      if (resource.context && typeof resource.context === 'string') {
+        // Parse context string like "title=Test|description=Desc|category=commercial"
+        const contextPairs = resource.context.split('|');
+        contextPairs.forEach(pair => {
+          const [key, value] = pair.split('=');
+          if (key && value) {
+            parsedContext[key.trim()] = value.trim();
+          }
+        });
+      } else if (resource.context && typeof resource.context === 'object') {
+        parsedContext = resource.context;
+      }
+      
+      const title = parsedContext.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
+      const description = parsedContext.description || '';
+      
+      // Extract category - check parsed context first, then tags
       let category = 'product';
       
-      // Priority 1: Check context.category (set during upload)
-      if (context.category) {
-        const contextCategory = context.category.toLowerCase().trim();
+      // Priority 1: Check parsed context category (set during upload)
+      if (parsedContext.category) {
+        const contextCategory = parsedContext.category.toLowerCase().trim();
         if (['commercial', 'travel', 'fashion', 'event', 'product'].includes(contextCategory)) {
           category = contextCategory;
         }
@@ -110,7 +124,7 @@ export const getPortfolioItems = async () => {
       
 
       
-      const uploadDate = context.uploadDate || resource.created_at;
+      const uploadDate = parsedContext.uploadDate || resource.created_at;
 
       return {
         id: index + 1, // Numeric ID as expected by admin panel
