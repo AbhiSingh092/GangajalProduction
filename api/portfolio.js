@@ -114,23 +114,36 @@ export const getPortfolioItems = async () => {
       const title = context.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
       const description = context.description || '';
       
-      // Simple category detection
-      let category = 'product'; // Default category
+      console.log(`[Cloudinary DB] Item "${title}" context:`, context);
+      console.log(`[Cloudinary DB] Item "${title}" tags:`, resource.tags);
       
-      // Check context first
+      // Category detection - prioritize context, then tags
+      let category = 'uncategorized';
+      
+      // Primary: Check context category (from upload)
       if (context.category) {
         category = context.category.toLowerCase().trim();
+        console.log(`[Cloudinary DB] Found context category: "${category}"`);
       }
-      // Check tags as fallback
+      // Fallback: Check tags for valid categories  
       else if (resource.tags && resource.tags.length > 0) {
-        // Find any category in tags
-        for (const tag of resource.tags) {
-          const tagLower = tag.toLowerCase();
-          if (['product', 'fashion', 'event', 'travel', 'commercial'].includes(tagLower)) {
-            category = tagLower;
-            break;
-          }
+        console.log(`[Cloudinary DB] No context category, checking tags:`, resource.tags);
+        const validCategories = ['product', 'fashion', 'event', 'travel', 'commercial'];
+        const foundCategory = resource.tags.find(tag => 
+          validCategories.includes(tag.toLowerCase().trim())
+        );
+        if (foundCategory) {
+          category = foundCategory.toLowerCase().trim();
+          console.log(`[Cloudinary DB] Found tag category: "${category}"`);
+        } else {
+          // Default to product only if no category found anywhere
+          category = 'product';
+          console.log(`[Cloudinary DB] No valid category found, defaulting to product`);
         }
+      } else {
+        // No context, no tags - default to product
+        category = 'product';
+        console.log(`[Cloudinary DB] No context or tags, defaulting to product`);
       }
       
       console.log(`[Cloudinary DB] Item ${index + 1} - "${title}":`, {
