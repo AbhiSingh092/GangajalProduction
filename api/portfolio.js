@@ -20,84 +20,78 @@ export const getPortfolioItems = async () => {
       ];
     }
 
-    // Search Cloudinary for portfolio images with multiple fallback strategies
-    const searchUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/search`;
+    // Use direct Cloudinary list API for more reliable results
+    const listUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/image`;
     const auth = Buffer.from(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`).toString('base64');
     
-    console.log('[Cloudinary DB] Searching for images...');
+    console.log('[Cloudinary DB] Getting all images from Cloudinary...');
     
-    // Try multiple search expressions to find images (ordered by reliability)
-    const searchExpressions = [
-      'folder:gangajal-portfolio',              // Exact folder match
-      'tags:portfolio',                         // By portfolio tag (most reliable)
-      'tags:gangajal',                         // By gangajal tag
-      'resource_type:image AND created_at>1day', // Recent uploads (last 24 hours)
-      'resource_type:image AND created_at>1week', // This week's uploads  
-      'resource_type:image'                     // All images as final fallback
-    ];
-
     let data = null;
-    let searchUsed = '';
-
-    for (const expression of searchExpressions) {
-      try {
-        const response = await fetch(searchUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            expression: expression,
-            with_field: ['context', 'tags'],
-            max_results: 100,
-            sort_by: [{ created_at: 'desc' }]
-          })
-        });
-
-        if (response.ok) {
-          const searchData = await response.json();
-          console.log(`[Cloudinary DB] Search "${expression}" found ${searchData.resources?.length || 0} items`);
-          
-          if (searchData.resources && searchData.resources.length > 0) {
-            data = searchData;
-            searchUsed = expression;
-            
-            // Debug: Show recent uploads
-            const recentUploads = searchData.resources.filter(r => {
-              const uploadTime = new Date(r.created_at);
-              const now = new Date();
-              const diffMinutes = (now.getTime() - uploadTime.getTime()) / (1000 * 60);
-              return diffMinutes < 60; // Last hour
-            });
-            
-            if (recentUploads.length > 0) {
-              console.log(`[Cloudinary DB] 🕒 ${recentUploads.length} recent uploads found:`,
-                recentUploads.map(r => ({ 
-                  public_id: r.public_id, 
-                  tags: r.tags,
-                  context: r.context,
-                  created_at: r.created_at
-                }))
-              );
-            }
-            
-            break;
-          }
-        } else {
-          console.log(`[Cloudinary DB] Search "${expression}" failed: ${response.status}`);
+    
+    try {
+      // Get all images with context and tags
+      const response = await fetch(`${listUrl}?context=true&tags=true&max_results=500`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
         }
-      } catch (searchError) {
-        console.log(`[Cloudinary DB] Search "${expression}" error:`, searchError.message);
+      });
+
+      if (response.ok) {
+        data = await response.json();
+        console.log(`[Cloudinary DB] ✅ Retrieved ${data.resources?.length || 0} total images`);
+        
+        // Filter for portfolio images (those with portfolio tags or in gangajal-portfolio folder)
+        if (data.resources) {
+          const portfolioImages = data.resources.filter(resource => {
+            const hasPortfolioTag = resource.tags?.includes('portfolio') || resource.tags?.includes('gangajal');
+            const inPortfolioFolder = resource.public_id?.includes('gangajal-portfolio');
+            return hasPortfolioTag || inPortfolioFolder;
+          });
+          
+          console.log(`[Cloudinary DB] 📁 Found ${portfolioImages.length} portfolio images`);
+          data.resources = portfolioImages;
+          
+          // Debug recent uploads
+          const recentUploads = portfolioImages.filter(r => {
+            const uploadTime = new Date(r.created_at);
+            const now = new Date();
+            const diffHours = (now.getTime() - uploadTime.getTime()) / (1000 * 60 * 60);
+            return diffHours < 24; // Last 24 hours
+          });
+          
+          if (recentUploads.length > 0) {
+            console.log(`[Cloudinary DB] 🕒 ${recentUploads.length} uploads in last 24h:`,
+              recentUploads.map(r => ({ 
+                public_id: r.public_id, 
+                tags: r.tags,
+                folder: r.folder,
+                created_at: r.created_at
+              }))
+            );
+          }
+        }
+      } else {
+        console.error(`[Cloudinary DB] ❌ List API failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[Cloudinary DB] Error details:', errorText);
       }
+    } catch (listError) {
+      console.error('[Cloudinary DB] List API error:', listError.message);
     }
 
-    if (!data || !data.resources) {
-      console.log('[Cloudinary DB] No images found with any search method');
-      throw new Error('No portfolio images found in Cloudinary');
+    if (!data || !data.resources || data.resources.length === 0) {
+      console.log('[Cloudinary DB] ⚠️  No portfolio images found in Cloudinary');
+      console.log('[Cloudinary DB] This could mean:');
+      console.log('- No images have been uploaded yet');
+      console.log('- Images are missing portfolio/gangajal tags');
+      console.log('- Images are not in gangajal-portfolio folder');
+      return [];
     }
 
-    console.log(`[Cloudinary DB] Using search: "${searchUsed}" - Found ${data.resources.length} images`);
+    console.log(`[Cloudinary DB] ✅ Found ${data.resources.length} portfolio images`);
+    console.log(`[Cloudinary DB] Processing images into portfolio format...`);
     
     // Transform Cloudinary data to portfolio format
     const portfolioItems = data.resources.map((resource, index) => {
