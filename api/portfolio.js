@@ -27,14 +27,22 @@ export const getPortfolioItems = async () => {
     let data = null;
     
     try {
-      // Get all images with context and tags
-      const response = await fetch(`${listUrl}?context=true&tags=true&max_results=500`, {
-        method: 'GET',
+      // Use search API instead of list API to get context data properly
+      const searchResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/search`, {
+        method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          expression: 'resource_type:image',
+          with_field: ['context', 'tags'],
+          max_results: 500,
+          sort_by: [{ created_at: 'desc' }]
+        })
       });
+      
+      const response = searchResponse;
 
       if (response.ok) {
         data = await response.json();
