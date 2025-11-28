@@ -15,9 +15,9 @@ export default async function handler(req, res) {
   }
 
   // Verify environment variables
-  const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUD_NAME } = process.env;
+  const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUDINARY_CLOUD_NAME } = process.env;
   
-  if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUD_NAME) {
+  if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUDINARY_CLOUD_NAME) {
     return res.status(500).json({ 
       error: 'Server configuration error',
       details: 'Missing Cloudinary credentials in environment variables' 
@@ -111,7 +111,7 @@ export default async function handler(req, res) {
     console.log(`[Upload] Storing with category: "${normalizedCategory}" in both tags and context`);
     
     // Upload to Cloudinary
-    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`;
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
     
     console.log('Uploading to Cloudinary:', {
       filename: uploadedFile.originalFilename,

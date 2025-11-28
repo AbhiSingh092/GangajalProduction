@@ -1,7 +1,7 @@
 // Portfolio API - Uses Cloudinary as Database (PERMANENT STORAGE!)
 // No more memory arrays - everything stored in Cloudinary metadata
 
-const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUD_NAME } = process.env;
+const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUDINARY_CLOUD_NAME } = process.env;
 
 // Helper function to fetch portfolio from Cloudinary
 export const getPortfolioItems = async () => {
@@ -21,7 +21,7 @@ export const getPortfolioItems = async () => {
     }
 
     // Use direct Cloudinary list API for more reliable results
-    const listUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/image`;
+    const listUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/image`;
     const auth = Buffer.from(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`).toString('base64');
     
     console.log('[Cloudinary DB] Getting all images from Cloudinary...');
@@ -195,16 +195,16 @@ export const getPortfolioItems = async () => {
 export const deletePortfolioItem = async (publicId) => {
   try {
     // Check environment variables
-    const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUD_NAME } = process.env;
+    const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUDINARY_CLOUD_NAME } = process.env;
     
-    if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUD_NAME) {
+    if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUDINARY_CLOUD_NAME) {
       throw new Error('Cloudinary credentials not configured for delete operation');
     }
 
     console.log(`[Cloudinary DB] Attempting to delete: ${publicId}`);
     
     // Use form-data approach for Cloudinary delete (more reliable)
-    const deleteUrl = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/destroy`;
+    const deleteUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`;
     
     const formData = new FormData();
     formData.append('public_id', publicId);
