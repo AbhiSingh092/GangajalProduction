@@ -164,12 +164,18 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       setDescription('');
       if (fileInputRef.current) fileInputRef.current.value = '';
       
+      // Wait a moment for Cloudinary to index the new upload
+      console.log('[AdminPanel] Waiting for Cloudinary to index new upload...');
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      
       // Refresh the items list from Cloudinary
+      console.log('[AdminPanel] Refreshing admin panel items list...');
       await loadItems();
       
       // Force refresh the main website cache (for production)
       try {
         // Trigger a cache refresh on the main portfolio API
+        console.log('[AdminPanel] Triggering website cache refresh...');
         fetch('/api/portfolio', { 
           method: 'GET',
           headers: { 'Cache-Control': 'no-cache' }

@@ -29,10 +29,10 @@ export const getPortfolioItems = async () => {
     // Try multiple search expressions to find images (ordered by reliability)
     const searchExpressions = [
       'folder:gangajal-portfolio',              // Exact folder match
-      'tags:portfolio AND tags:gangajal',       // Both portfolio and gangajal tags
-      'tags:portfolio',                         // By portfolio tag only
-      'tags:gangajal',                         // By gangajal tag only
-      'resource_type:image AND created_at>1month', // Recent images
+      'tags:portfolio',                         // By portfolio tag (most reliable)
+      'tags:gangajal',                         // By gangajal tag
+      'resource_type:image AND created_at>1day', // Recent uploads (last 24 hours)
+      'resource_type:image AND created_at>1week', // This week's uploads  
       'resource_type:image'                     // All images as final fallback
     ];
 
@@ -62,6 +62,26 @@ export const getPortfolioItems = async () => {
           if (searchData.resources && searchData.resources.length > 0) {
             data = searchData;
             searchUsed = expression;
+            
+            // Debug: Show recent uploads
+            const recentUploads = searchData.resources.filter(r => {
+              const uploadTime = new Date(r.created_at);
+              const now = new Date();
+              const diffMinutes = (now.getTime() - uploadTime.getTime()) / (1000 * 60);
+              return diffMinutes < 60; // Last hour
+            });
+            
+            if (recentUploads.length > 0) {
+              console.log(`[Cloudinary DB] 🕒 ${recentUploads.length} recent uploads found:`,
+                recentUploads.map(r => ({ 
+                  public_id: r.public_id, 
+                  tags: r.tags,
+                  context: r.context,
+                  created_at: r.created_at
+                }))
+              );
+            }
+            
             break;
           }
         } else {
