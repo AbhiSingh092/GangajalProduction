@@ -8,23 +8,14 @@ export const getPortfolioItems = async () => {
   try {
     console.log('[Portfolio] Environment check:', {
       hasApiKey: !!CLOUDINARY_API_KEY,
-      hasApiSecret: !!CLOUDINARY_API_SECRET,
+      hasApiSecret: !!CLOUDINARY_API_SECRET,  
       hasCloudName: !!CLOUDINARY_CLOUD_NAME,
       cloudName: CLOUDINARY_CLOUD_NAME
     });
     
     if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUDINARY_CLOUD_NAME) {
-      console.log('Using sample data - Cloudinary credentials not configured');
-      return [
-        {
-          id: 1,
-          title: 'Sample Wedding Photography',
-          category: 'event', 
-          imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=500&h=400&fit=crop',
-          description: 'Beautiful wedding moments captured',
-          createdAt: new Date().toISOString()
-        }
-      ];
+      console.error('[Portfolio] ❌ Missing Cloudinary credentials!');
+      throw new Error('Cloudinary credentials not configured');
     }
 
     // Use direct Cloudinary list API for more reliable results
@@ -49,16 +40,14 @@ export const getPortfolioItems = async () => {
         data = await response.json();
         console.log(`[Cloudinary DB] ✅ Retrieved ${data.resources?.length || 0} total images`);
         
-        // Filter for portfolio images (those with portfolio tags or in gangajal-portfolio folder)
+        // Get ALL images - don't filter, show everything
         if (data.resources) {
-          const portfolioImages = data.resources.filter(resource => {
-            const hasPortfolioTag = resource.tags?.includes('portfolio') || resource.tags?.includes('gangajal');
-            const inPortfolioFolder = resource.public_id?.includes('gangajal-portfolio');
-            return hasPortfolioTag || inPortfolioFolder;
-          });
-          
-          console.log(`[Cloudinary DB] 📁 Found ${portfolioImages.length} portfolio images`);
-          data.resources = portfolioImages;
+          console.log(`[Cloudinary DB] 📁 Found ${data.resources.length} total images`);
+          console.log('[Cloudinary DB] Sample images:', data.resources.slice(0, 3).map(r => ({
+            public_id: r.public_id,
+            tags: r.tags,
+            folder: r.folder
+          })));
           
           // Debug recent uploads
           const recentUploads = portfolioImages.filter(r => {
@@ -83,6 +72,18 @@ export const getPortfolioItems = async () => {
         console.error(`[Cloudinary DB] ❌ List API failed: ${response.status}`);
         const errorText = await response.text();
         console.error('[Cloudinary DB] Error details:', errorText);
+        
+        // Try simpler API call as backup
+        console.log('[Cloudinary DB] Trying backup API call...');
+        const backupUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/image`;
+        const backupResponse = await fetch(backupUrl, {
+          headers: { 'Authorization': `Basic ${auth}` }
+        });
+        
+        if (backupResponse.ok) {
+          data = await backupResponse.json();
+          console.log(`[Cloudinary DB] ✅ Backup API found ${data.resources?.length || 0} images`);
+        }
       }
     } catch (listError) {
       console.error('[Cloudinary DB] List API error:', listError.message);
@@ -113,36 +114,23 @@ export const getPortfolioItems = async () => {
       const title = context.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
       const description = context.description || '';
       
-      // Robust category detection - check context first, then tags
-      let category = 'uncategorized';
+      // Simple category detection
+      let category = 'product'; // Default category
       
-      // Primary: Check context category
+      // Check context first
       if (context.category) {
         category = context.category.toLowerCase().trim();
       }
-      // Fallback: Check tags for valid categories
+      // Check tags as fallback
       else if (resource.tags && resource.tags.length > 0) {
-        const validCategories = ['product', 'fashion', 'event', 'travel', 'commercial'];
-        const foundCategory = resource.tags.find(tag => 
-          validCategories.includes(tag.toLowerCase().trim())
-        );
-        if (foundCategory) {
-          category = foundCategory.toLowerCase().trim();
+        // Find any category in tags
+        for (const tag of resource.tags) {
+          const tagLower = tag.toLowerCase();
+          if (['product', 'fashion', 'event', 'travel', 'commercial'].includes(tagLower)) {
+            category = tagLower;
+            break;
+          }
         }
-      }
-      
-      // Normalize category variations - more comprehensive
-      const categoryLower = category.toLowerCase();
-      if (categoryLower.includes('travel') || categoryLower.includes('lifestyle')) {
-        category = 'travel';
-      } else if (categoryLower.includes('commercial') || categoryLower.includes('business')) {
-        category = 'commercial';
-      } else if (categoryLower.includes('product')) {
-        category = 'product';
-      } else if (categoryLower.includes('fashion') || categoryLower.includes('portrait')) {
-        category = 'fashion';
-      } else if (categoryLower.includes('event') || categoryLower.includes('wedding')) {
-        category = 'event';
       }
       
       console.log(`[Cloudinary DB] Item ${index + 1} - "${title}":`, {
