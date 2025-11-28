@@ -89,18 +89,10 @@ export const getPortfolioItems = async () => {
     // Transform Cloudinary data to portfolio format
     const portfolioItems = data.resources.map((resource, index) => {
 
-      // DEBUG: Log what Cloudinary is actually returning
-      console.log(`[DEBUG] Resource for "${resource.public_id}":`, {
-        context: resource.context,
-        contextType: typeof resource.context,
-        tags: resource.tags
-      });
-      
-      // Parse context metadata - Cloudinary stores context as string, need to parse it
+      // Parse context for title and description
       let parsedContext = {};
       
       if (resource.context && typeof resource.context === 'string') {
-        console.log(`[DEBUG] Parsing context string:`, resource.context);
         const contextPairs = resource.context.split('|');
         contextPairs.forEach(pair => {
           const [key, value] = pair.split('=');
@@ -108,38 +100,25 @@ export const getPortfolioItems = async () => {
             parsedContext[key.trim()] = value.trim();
           }
         });
-        console.log(`[DEBUG] Parsed context:`, parsedContext);
       } else if (resource.context && typeof resource.context === 'object') {
         parsedContext = resource.context;
-        console.log(`[DEBUG] Context is object:`, parsedContext);
       }
       
       const title = parsedContext.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
       const description = parsedContext.description || '';
       
-      // Extract category - use TAGS as primary (they're more reliable than context)
+      // SIMPLE FIX: Just use the first tag as category (that's where it's stored)
       let category = 'product';
       
-      // Priority 1: Check tags first (first tag is the category)
       if (resource.tags && resource.tags.length > 0) {
-        console.log(`[DEBUG] Checking tags:`, resource.tags);
-        const firstTag = resource.tags[0].toLowerCase().trim();
-        if (['commercial', 'travel', 'fashion', 'event', 'product'].includes(firstTag)) {
-          category = firstTag;
-          console.log(`[DEBUG] Found category in first tag: ${firstTag}`);
-        }
+        // The upload API puts category as first tag: "commercial,portfolio,gangajal,..."
+        const firstTag = resource.tags[0].toLowerCase();
+        if (firstTag === 'commercial') category = 'commercial';
+        else if (firstTag === 'travel') category = 'travel';
+        else if (firstTag === 'fashion') category = 'fashion';
+        else if (firstTag === 'event') category = 'event';
+        else if (firstTag === 'product') category = 'product';
       }
-      
-      // Priority 2: If no valid category in tags, check parsed context
-      if (category === 'product' && parsedContext.category) {
-        const contextCategory = parsedContext.category.toLowerCase().trim();
-        if (['commercial', 'travel', 'fashion', 'event'].includes(contextCategory)) {
-          category = contextCategory;
-          console.log(`[DEBUG] Found category in context: ${contextCategory}`);
-        }
-      }
-      
-      console.log(`[DEBUG] Final category for "${title}": ${category}`);
       
 
       
