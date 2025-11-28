@@ -6,7 +6,15 @@ const { CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUDINARY_CLOUD_NAME } = pro
 // Helper function to fetch portfolio from Cloudinary
 export const getPortfolioItems = async () => {
   try {
+    console.log('[Portfolio] Environment check:', {
+      hasApiKey: !!CLOUDINARY_API_KEY,
+      hasApiSecret: !!CLOUDINARY_API_SECRET,
+      hasCloudName: !!CLOUDINARY_CLOUD_NAME,
+      cloudName: CLOUDINARY_CLOUD_NAME
+    });
+    
     if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET || !CLOUDINARY_CLOUD_NAME) {
+      console.error('[Portfolio] Missing Cloudinary credentials!');
       throw new Error('Cloudinary credentials not configured');
     }
 
@@ -55,23 +63,20 @@ export const getPortfolioItems = async () => {
           }
         }
       } else {
-        // Try simpler API call as backup
-        const backupUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/image`;
-        const backupResponse = await fetch(backupUrl, {
-          headers: { 'Authorization': `Basic ${auth}` }
-        });
-        
-        if (backupResponse.ok) {
-          data = await backupResponse.json();
-        }
+        console.error(`[Cloudinary DB] List API failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[Cloudinary DB] Error details:', errorText);
       }
     } catch (listError) {
-      throw new Error('Failed to retrieve images from Cloudinary');
+      console.error('[Cloudinary DB] List API error:', listError.message);
     }
 
     if (!data || !data.resources || data.resources.length === 0) {
+      console.log('[Cloudinary DB] No portfolio images found in Cloudinary');
       return [];
     }
+
+    console.log(`[Cloudinary DB] Processing ${data.resources.length} images...`);
 
     // Transform Cloudinary data to portfolio format
     const portfolioItems = data.resources.map((resource, index) => {
@@ -84,10 +89,14 @@ export const getPortfolioItems = async () => {
       // Extract category from tags (first tag is always the category from upload)
       let category = 'product';
       
+      console.log(`[Portfolio] Image "${title}" - Tags:`, resource.tags, 'Context:', context.category);
+      
       if (resource.tags && resource.tags.length > 0) {
         // First tag is the category from upload API
         const firstTag = resource.tags[0].toLowerCase().trim();
         const validCategories = ['product', 'fashion', 'event', 'travel', 'commercial'];
+        
+        console.log(`[Portfolio] First tag: "${firstTag}", Valid: ${validCategories.includes(firstTag)}`);
         
         if (validCategories.includes(firstTag)) {
           category = firstTag;
@@ -98,6 +107,8 @@ export const getPortfolioItems = async () => {
           }
         }
       }
+      
+      console.log(`[Portfolio] Final category for "${title}": ${category}`);
       
 
       

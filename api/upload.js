@@ -107,6 +107,7 @@ export default async function handler(req, res) {
     // Add context metadata with explicit category
     const contextData = `title=${title}|description=${description}|category=${normalizedCategory}|uploadDate=${new Date().toISOString()}`;
     cloudinaryForm.append('context', contextData);
+    console.log(`[Upload] Storing category: "${normalizedCategory}"`);
     
     // Upload to Cloudinary
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
