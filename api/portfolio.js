@@ -91,7 +91,7 @@ export const getPortfolioItems = async () => {
       
       // ULTRA-ROBUST CONTEXT PARSING
       let parsedContext = {};
-      
+
       try {
         if (resource.context) {
           if (typeof resource.context === 'string') {
@@ -108,8 +108,13 @@ export const getPortfolioItems = async () => {
               }
             });
           } else if (typeof resource.context === 'object') {
-            // Handle object context: {category: "commercial", title: "..."}
-            parsedContext = { ...resource.context };
+            // Cloudinary sometimes returns context as { custom: { key: value } }
+            if (resource.context.custom && typeof resource.context.custom === 'object') {
+              parsedContext = { ...resource.context.custom };
+            } else {
+              // Generic object context
+              parsedContext = { ...resource.context };
+            }
           }
         }
       } catch (e) {
@@ -124,18 +129,28 @@ export const getPortfolioItems = async () => {
       // NUCLEAR-PROOF CATEGORY DETECTION - HANDLES EVERY POSSIBLE SCENARIO
       let category = 'product'; // SAFE DEFAULT
       const validCategories = ['commercial', 'travel', 'fashion', 'event', 'product'];
+      // map common synonyms to our canonical categories
+      const synonyms = {
+        lifestyle: 'travel',
+        portrait: 'fashion',
+        portraits: 'fashion',
+        wedding: 'event',
+        weddings: 'event',
+        'product photography': 'product',
+        'product-photo': 'product'
+      };
       let categorySource = 'default';
       
       console.log(`\n🎯 DETECTING CATEGORY FOR: "${title}"`);
       
       // PRIORITY 1: Check parsed context (most reliable for our uploads)
       if (parsedContext.category) {
-        const contextCategory = String(parsedContext.category).toLowerCase().trim();
-        console.log(`📝 Context category: "${contextCategory}"`);
+        let contextCategory = String(parsedContext.category).toLowerCase().trim();
+        // normalize synonyms
+        if (synonyms[contextCategory]) contextCategory = synonyms[contextCategory];
         if (validCategories.includes(contextCategory)) {
           category = contextCategory;
           categorySource = 'context';
-          console.log(`✅ SUCCESS: Category from context: "${category}"`);
         }
       }
       
@@ -186,24 +201,22 @@ export const getPortfolioItems = async () => {
           
           // Check first tag (our uploads put category first)
           if (tagsArray.length > 0) {
-            const firstTag = tagsArray[0].toLowerCase();
-            console.log(`🥇 First tag: "${firstTag}"`);
+            let firstTag = String(tagsArray[0]).toLowerCase().trim();
+            if (synonyms[firstTag]) firstTag = synonyms[firstTag];
             if (validCategories.includes(firstTag)) {
               category = firstTag;
               categorySource = 'first_tag';
-              console.log(`✅ SUCCESS: Category from first tag: "${category}"`);
             }
           }
           
           // Scan ALL tags if still no match
           if (category === 'product' && tagsArray.length > 0) {
-            console.log(`🔍 Scanning all tags for category...`);
             for (const tag of tagsArray) {
-              const tagLower = String(tag).toLowerCase().trim();
+              let tagLower = String(tag).toLowerCase().trim();
+              if (synonyms[tagLower]) tagLower = synonyms[tagLower];
               if (validCategories.includes(tagLower) && tagLower !== 'product') {
                 category = tagLower;
                 categorySource = 'tag_scan';
-                console.log(`✅ SUCCESS: Found category in tags: "${category}"`);
                 break;
               }
             }
