@@ -42,9 +42,10 @@ export const getPortfolioItems = async () => {
         
         // Get ALL images from Cloudinary
         if (data.resources) {
+          console.log(`[Cloudinary DB] Found ${data.resources.length} total resources`);
           
           // Debug recent uploads
-          const recentUploads = portfolioImages.filter(r => {
+          const recentUploads = data.resources.filter(r => {
             const uploadTime = new Date(r.created_at);
             const now = new Date();
             const diffHours = (now.getTime() - uploadTime.getTime()) / (1000 * 60 * 60);
@@ -103,42 +104,52 @@ export const getPortfolioItems = async () => {
       console.log(`[Portfolio] Image "${title}" - ALL TAGS:`, resource.tags);
       console.log(`[Portfolio] Image "${title}" - CONTEXT:`, resource.context);
       
-      // Category detection - check ALL tags for category
-      let category = 'product';
+      // BULLETPROOF CATEGORY DETECTION LOGIC
+      let category = 'product'; // Safe default
+      const validCategories = ['commercial', 'travel', 'fashion', 'event', 'product'];
       
-      if (resource.tags && resource.tags.length > 0) {
-        console.log(`[Portfolio] Checking ALL tags for "${title}":`, resource.tags);
+      console.log(`\n[Portfolio] 🔍 ANALYZING "${title}"`);
+      console.log(`[Portfolio] Tags:`, resource.tags);
+      console.log(`[Portfolio] Context:`, resource.context);
+      
+      // METHOD 1: Check context category (Upload stores it here)
+      if (parsedContext.category) {
+        const contextCategory = parsedContext.category.toLowerCase().trim();
+        console.log(`[Portfolio] 📝 Context category found: "${contextCategory}"`);
         
-        // Check each tag for category
+        if (validCategories.includes(contextCategory)) {
+          category = contextCategory;
+          console.log(`[Portfolio] ✅ SUCCESS: Using context category: "${category}"`);
+        }
+      }
+      
+      // METHOD 2: Check first tag (Upload stores category as FIRST tag)
+      if (category === 'product' && resource.tags && resource.tags.length > 0) {
+        const firstTag = resource.tags[0].toLowerCase().trim();
+        console.log(`[Portfolio] 🏷️ First tag: "${firstTag}"`);
+        
+        if (validCategories.includes(firstTag)) {
+          category = firstTag;
+          console.log(`[Portfolio] ✅ SUCCESS: Using first tag as category: "${category}"`);
+        }
+      }
+      
+      // METHOD 3: Scan ALL tags if still no match
+      if (category === 'product' && resource.tags && resource.tags.length > 0) {
+        console.log(`[Portfolio] 🔄 Scanning all tags for category...`);
+        
         for (const tag of resource.tags) {
-          const tagLower = tag.toLowerCase();
-          console.log(`[Portfolio] Checking tag: "${tagLower}"`);
-          
-          if (tagLower === 'commercial') {
-            category = 'commercial';
-            console.log(`[Portfolio] ✅ Found COMMERCIAL in tags!`);
-            break;
-          } else if (tagLower === 'travel') {
-            category = 'travel';
-            console.log(`[Portfolio] ✅ Found TRAVEL in tags!`);
-            break;
-          } else if (tagLower === 'fashion') {
-            category = 'fashion';
-            console.log(`[Portfolio] ✅ Found FASHION in tags!`);
-            break;
-          } else if (tagLower === 'event') {
-            category = 'event';
-            console.log(`[Portfolio] ✅ Found EVENT in tags!`);
-            break;
-          } else if (tagLower === 'product') {
-            category = 'product';
-            console.log(`[Portfolio] ✅ Found PRODUCT in tags!`);
+          const tagLower = tag.toLowerCase().trim();
+          if (validCategories.includes(tagLower) && tagLower !== 'product') {
+            category = tagLower;
+            console.log(`[Portfolio] ✅ SUCCESS: Found category in tags: "${category}"`);
             break;
           }
         }
-        
-        console.log(`[Portfolio] FINAL CATEGORY for "${title}": "${category}"`);
       }
+      
+      console.log(`[Portfolio] 🎯 FINAL RESULT: "${title}" -> Category: "${category}"`);
+      console.log(`[Portfolio] ═══════════════════════════════════════════════════════════`);
       
 
       
