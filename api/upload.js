@@ -43,8 +43,16 @@ export default async function handler(req, res) {
     // CATEGORY extraction FIX (THIS WAS THE MAIN ISSUE)
     let category = fields.category;
     if (Array.isArray(category)) category = category[0];
-    if (!category || category.trim() === "") category = "uncategorized";
+    if (!category || typeof category !== 'string' || category.trim() === "") {
+      category = "product"; // default to product instead of uncategorized
+    }
     const normalizedCategory = category.toLowerCase().trim();
+    
+    // Validate against allowed categories
+    const validCategories = ['commercial', 'travel', 'fashion', 'event', 'product'];
+    const finalCategory = validCategories.includes(normalizedCategory) ? normalizedCategory : 'product';
+    
+    console.log(`[Upload] Received category: "${fields.category}" → Normalized: "${finalCategory}"`);
 
     // OTHER FIELDS
     const title = Array.isArray(fields.title) ? fields.title[0] : fields.title || "Untitled";
@@ -63,33 +71,30 @@ export default async function handler(req, res) {
     const buffer = fs.readFileSync(file.filepath);
     const blob = new Blob([buffer], { type: file.mimetype });
 
-    // Upload preset
-    const uploadPresetName = "gangajal_preset";
+    // Use SIGNED upload (no preset needed)
+    const timestamp = Math.floor(Date.now() / 1000);
+    const folder = `gangajal-portfolio/${finalCategory}`;
+    const publicId = `${finalCategory}_${title.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
+    const tags = `${finalCategory},portfolio,gangajal,${title.replace(/\s+/g, "_")}`;
+    const context = `title=${title}|description=${description}|category=${finalCategory}`;
+
+    // Create signature for signed upload
+    const paramsToSign = `context=${context}&folder=${folder}&public_id=${publicId}&tags=${tags}&timestamp=${timestamp}`;
+    const signature = crypto
+      .createHash("sha1")
+      .update(paramsToSign + CLOUDINARY_API_SECRET)
+      .digest("hex");
 
     // Prepare data for Cloudinary
     const cloudForm = new FormData();
     cloudForm.append("file", blob);
-    cloudForm.append("upload_preset", uploadPresetName);
-
-    // Store category correctly
-    const folder = `gangajal-portfolio/${normalizedCategory}`;
+    cloudForm.append("api_key", CLOUDINARY_API_KEY);
+    cloudForm.append("timestamp", timestamp.toString());
+    cloudForm.append("signature", signature);
     cloudForm.append("folder", folder);
-
-    // Tags
-    cloudForm.append(
-      "tags",
-      `${normalizedCategory},portfolio,gangajal,${title.replace(/\s+/g, "_")}`
-    );
-
-    // Context
-    cloudForm.append(
-      "context",
-      `title=${title}|description=${description}|category=${normalizedCategory}`
-    );
-
-    // Public ID
-    const publicId = `${normalizedCategory}_${title.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
     cloudForm.append("public_id", publicId);
+    cloudForm.append("tags", tags);
+    cloudForm.append("context", context);
 
     // Upload URL
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
@@ -116,11 +121,13 @@ export default async function handler(req, res) {
 
     const result = await response.json();
 
+    console.log(`[Upload] SUCCESS: Uploaded to folder "${folder}" with category "${finalCategory}"`);
+    
     return res.status(200).json({
       secure_url: result.secure_url,
       public_id: result.public_id,
       folder,
-      category: normalizedCategory,
+      category: finalCategory,
       width: result.width,
       height: result.height,
       size: result.bytes,
