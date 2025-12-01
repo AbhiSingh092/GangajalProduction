@@ -82,15 +82,19 @@ export const getPortfolioItems = async () => {
     // Transform Cloudinary data to portfolio format
     const portfolioItems = data.resources.map((resource, index) => {
 
-      // Parse context for title and description
+      // Parse context for title and description (FIXED PARSING!)
       let parsedContext = {};
       
       if (resource.context && typeof resource.context === 'string') {
         const contextPairs = resource.context.split('|');
         contextPairs.forEach(pair => {
-          const [key, value] = pair.split('=');
-          if (key && value) {
-            parsedContext[key.trim()] = value.trim();
+          const equalIndex = pair.indexOf('=');
+          if (equalIndex > 0) {
+            const key = pair.substring(0, equalIndex).trim();
+            const value = pair.substring(equalIndex + 1).trim();
+            if (key && value) {
+              parsedContext[key] = value;
+            }
           }
         });
       } else if (resource.context && typeof resource.context === 'object') {
@@ -100,56 +104,53 @@ export const getPortfolioItems = async () => {
       const title = parsedContext.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
       const description = parsedContext.description || '';
       
-      // DEBUG: Show all tags and context for this image
-      console.log(`[Portfolio] Image "${title}" - ALL TAGS:`, resource.tags);
-      console.log(`[Portfolio] Image "${title}" - CONTEXT:`, resource.context);
-      
-      // BULLETPROOF CATEGORY DETECTION LOGIC
+      // BULLETPROOF CATEGORY DETECTION LOGIC (ACTUALLY FIXED!)
       let category = 'product'; // Safe default
       const validCategories = ['commercial', 'travel', 'fashion', 'event', 'product'];
-      
-      console.log(`\n[Portfolio] 🔍 ANALYZING "${title}"`);
-      console.log(`[Portfolio] Tags:`, resource.tags);
-      console.log(`[Portfolio] Context:`, resource.context);
       
       // METHOD 1: Check context category (Upload stores it here)
       if (parsedContext.category) {
         const contextCategory = parsedContext.category.toLowerCase().trim();
-        console.log(`[Portfolio] 📝 Context category found: "${contextCategory}"`);
-        
         if (validCategories.includes(contextCategory)) {
           category = contextCategory;
-          console.log(`[Portfolio] ✅ SUCCESS: Using context category: "${category}"`);
         }
       }
       
-      // METHOD 2: Check first tag (Upload stores category as FIRST tag)
-      if (category === 'product' && resource.tags && resource.tags.length > 0) {
-        const firstTag = resource.tags[0].toLowerCase().trim();
-        console.log(`[Portfolio] 🏷️ First tag: "${firstTag}"`);
+      // METHOD 2: Check tags (handle both string and array format!)
+      if (resource.tags) {
+        let tagsArray = [];
         
-        if (validCategories.includes(firstTag)) {
-          category = firstTag;
-          console.log(`[Portfolio] ✅ SUCCESS: Using first tag as category: "${category}"`);
+        // Handle tags as string "tag1,tag2,tag3" OR array ["tag1", "tag2", "tag3"]
+        if (typeof resource.tags === 'string') {
+          tagsArray = resource.tags.split(',').map(tag => tag.trim());
+        } else if (Array.isArray(resource.tags)) {
+          tagsArray = resource.tags;
         }
-      }
-      
-      // METHOD 3: Scan ALL tags if still no match
-      if (category === 'product' && resource.tags && resource.tags.length > 0) {
-        console.log(`[Portfolio] 🔄 Scanning all tags for category...`);
         
-        for (const tag of resource.tags) {
-          const tagLower = tag.toLowerCase().trim();
-          if (validCategories.includes(tagLower) && tagLower !== 'product') {
-            category = tagLower;
-            console.log(`[Portfolio] ✅ SUCCESS: Found category in tags: "${category}"`);
-            break;
+        // Check first tag (category should be first)
+        if (tagsArray.length > 0) {
+          const firstTag = tagsArray[0].toLowerCase().trim();
+          if (validCategories.includes(firstTag)) {
+            category = firstTag;
+          }
+        }
+        
+        // Fallback: scan all tags if first tag method failed
+        if (category === 'product' && tagsArray.length > 0) {
+          for (const tag of tagsArray) {
+            const tagLower = tag.toLowerCase().trim();
+            if (validCategories.includes(tagLower) && tagLower !== 'product') {
+              category = tagLower;
+              break;
+            }
           }
         }
       }
       
-      console.log(`[Portfolio] 🎯 FINAL RESULT: "${title}" -> Category: "${category}"`);
-      console.log(`[Portfolio] ═══════════════════════════════════════════════════════════`);
+      // Only log if category detection fails (for debugging)
+      if (category === 'product' && resource.tags && resource.tags.length > 0) {
+        console.warn(`[Portfolio] Category defaulted to 'product' for "${title}" - Tags:`, resource.tags);
+      }
       
 
       
