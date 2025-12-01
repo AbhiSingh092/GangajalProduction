@@ -81,51 +81,64 @@ export default async function handler(req, res) {
     const title = fields.title?.[0] || 'Untitled';
     const description = fields.description?.[0] || '';
     
-    // Use UNSIGNED upload (no signature needed - most reliable!)
-    // This approach completely eliminates signature authentication issues
-    
+    // Use SIGNED upload with all parameters to ensure category is stored properly
+    // Upload presets may restrict folder/context/tags parameters
+
     // Prepare form data for Cloudinary
     const cloudinaryForm = new FormData();
-    
+
     // Read file and create blob
     const fs = await import('fs');
     const fileBuffer = fs.readFileSync(uploadedFile.filepath);
     const blob = new Blob([fileBuffer], { type: uploadedFile.mimetype });
-    
-    // Create upload preset name dynamically (Cloudinary accepts any preset name)
-    const uploadPresetName = 'gangajal_preset';
-    
+
     // Normalize category to ensure consistency (CRITICAL FIX!)
     const normalizedCategory = category.toLowerCase().trim();
     console.log(`[Upload] Original category: "${category}" -> Normalized: "${normalizedCategory}"`);
-    
-    // Try unsigned upload first (no signature required)
-    cloudinaryForm.append('file', blob);
-    cloudinaryForm.append('upload_preset', uploadPresetName);
-    
+
     // STORE CATEGORY IN FOLDER PATH (most reliable!)
     const categoryFolder = `gangajal-portfolio/${normalizedCategory}`;
-    cloudinaryForm.append('folder', categoryFolder);
-    
+
     // STORE CATEGORY IN MULTIPLE PLACES FOR BULLETPROOF DETECTION!
-    
+
     // 1. CATEGORY AS FIRST TAG (primary method)
     const tagsToUpload = `${normalizedCategory},portfolio,gangajal,${title.replace(/\s+/g, '_')}`;
-    cloudinaryForm.append('tags', tagsToUpload);
-    
+
     // 2. CATEGORY IN CONTEXT (backup method)
     const contextData = `title=${title}|description=${description}|category=${normalizedCategory}|uploadDate=${new Date().toISOString()}`;
-    cloudinaryForm.append('context', contextData);
-    
+
     // 3. CATEGORY IN PUBLIC_ID (triple backup)
     const categoryPublicId = `${normalizedCategory}_${title.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
-    cloudinaryForm.append('public_id', categoryPublicId);
-    
+
     console.log(`\n🎯 TRIPLE CATEGORY STORAGE FOR: "${normalizedCategory}"`);
     console.log(`📁 Folder: "${categoryFolder}"`);
     console.log(`🏷️ Tags: "${tagsToUpload}"`);
     console.log(`📝 Context: "${contextData}"`);
-    console.log(`🔗 Public ID: "${categoryPublicId}"`);    // Upload to Cloudinary
+    console.log(`🔗 Public ID: "${categoryPublicId}"`);
+
+    // Create SIGNED upload parameters (includes all category data)
+
+    // Build signature string with ALL parameters that need signing
+    const signatureParams = [
+      `folder=${categoryFolder}`,
+      `tags=${tagsToUpload}`,
+      `context=${contextData}`,
+      `public_id=${categoryPublicId}`,
+      `timestamp=${timestamp}`
+    ].join('&');
+
+    const signatureString = signatureParams + CLOUDINARY_API_SECRET;
+    const signature = crypto.createHash('sha1').update(signatureString).digest('hex');
+
+    // Add all parameters to form
+    cloudinaryForm.append('file', blob);
+    cloudinaryForm.append('api_key', CLOUDINARY_API_KEY);
+    cloudinaryForm.append('timestamp', timestamp.toString());
+    cloudinaryForm.append('signature', signature);
+    cloudinaryForm.append('folder', categoryFolder);
+    cloudinaryForm.append('tags', tagsToUpload);
+    cloudinaryForm.append('context', contextData);
+    cloudinaryForm.append('public_id', categoryPublicId);
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
     
     console.log('Uploading to Cloudinary:', {
