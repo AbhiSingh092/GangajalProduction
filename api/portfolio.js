@@ -27,22 +27,14 @@ export const getPortfolioItems = async () => {
     let data = null;
     
     try {
-      // Use search API instead of list API to get context data properly
-      const searchResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/search`, {
-        method: 'POST',
+      // Get all images with tags - use simple list API
+      const response = await fetch(`${listUrl}?tags=true&context=true&max_results=500`, {
+        method: 'GET',
         headers: {
           'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          expression: 'resource_type:image',
-          with_field: ['context', 'tags'],
-          max_results: 500,
-          sort_by: [{ created_at: 'desc' }]
-        })
+        }
       });
-      
-      const response = searchResponse;
 
       if (response.ok) {
         data = await response.json();
@@ -107,17 +99,45 @@ export const getPortfolioItems = async () => {
       const title = parsedContext.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
       const description = parsedContext.description || '';
       
-      // SIMPLE FIX: Just use the first tag as category (that's where it's stored)
+      // DEBUG: Show all tags and context for this image
+      console.log(`[Portfolio] Image "${title}" - ALL TAGS:`, resource.tags);
+      console.log(`[Portfolio] Image "${title}" - CONTEXT:`, resource.context);
+      
+      // Category detection - check ALL tags for category
       let category = 'product';
       
       if (resource.tags && resource.tags.length > 0) {
-        // The upload API puts category as first tag: "commercial,portfolio,gangajal,..."
-        const firstTag = resource.tags[0].toLowerCase();
-        if (firstTag === 'commercial') category = 'commercial';
-        else if (firstTag === 'travel') category = 'travel';
-        else if (firstTag === 'fashion') category = 'fashion';
-        else if (firstTag === 'event') category = 'event';
-        else if (firstTag === 'product') category = 'product';
+        console.log(`[Portfolio] Checking ALL tags for "${title}":`, resource.tags);
+        
+        // Check each tag for category
+        for (const tag of resource.tags) {
+          const tagLower = tag.toLowerCase();
+          console.log(`[Portfolio] Checking tag: "${tagLower}"`);
+          
+          if (tagLower === 'commercial') {
+            category = 'commercial';
+            console.log(`[Portfolio] ✅ Found COMMERCIAL in tags!`);
+            break;
+          } else if (tagLower === 'travel') {
+            category = 'travel';
+            console.log(`[Portfolio] ✅ Found TRAVEL in tags!`);
+            break;
+          } else if (tagLower === 'fashion') {
+            category = 'fashion';
+            console.log(`[Portfolio] ✅ Found FASHION in tags!`);
+            break;
+          } else if (tagLower === 'event') {
+            category = 'event';
+            console.log(`[Portfolio] ✅ Found EVENT in tags!`);
+            break;
+          } else if (tagLower === 'product') {
+            category = 'product';
+            console.log(`[Portfolio] ✅ Found PRODUCT in tags!`);
+            break;
+          }
+        }
+        
+        console.log(`[Portfolio] FINAL CATEGORY for "${title}": "${category}"`);
       }
       
 

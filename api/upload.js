@@ -102,12 +102,14 @@ export default async function handler(req, res) {
     cloudinaryForm.append('file', blob);
     cloudinaryForm.append('upload_preset', uploadPresetName);
     cloudinaryForm.append('folder', 'gangajal-portfolio');
-    cloudinaryForm.append('tags', `${normalizedCategory},portfolio,gangajal,${title.replace(/\s+/g, '_')}`);
+    const tagsToUpload = `${normalizedCategory},portfolio,gangajal,${title.replace(/\s+/g, '_')}`;
+    cloudinaryForm.append('tags', tagsToUpload);
     
     // Add context metadata with explicit category
     const contextData = `title=${title}|description=${description}|category=${normalizedCategory}|uploadDate=${new Date().toISOString()}`;
     cloudinaryForm.append('context', contextData);
-    console.log(`[Upload] Storing category: "${normalizedCategory}"`);
+    
+    console.log(`[Upload] Category: "${normalizedCategory}", Tags: "${tagsToUpload}", Context: "${contextData}"`);
     
     // Upload to Cloudinary
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
