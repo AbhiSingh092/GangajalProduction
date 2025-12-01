@@ -102,19 +102,30 @@ export default async function handler(req, res) {
     // Try unsigned upload first (no signature required)
     cloudinaryForm.append('file', blob);
     cloudinaryForm.append('upload_preset', uploadPresetName);
-    cloudinaryForm.append('folder', 'gangajal-portfolio');
     
-    // CRITICAL: Category MUST be the FIRST tag for reliable detection!
+    // STORE CATEGORY IN FOLDER PATH (most reliable!)
+    const categoryFolder = `gangajal-portfolio/${normalizedCategory}`;
+    cloudinaryForm.append('folder', categoryFolder);
+    
+    // STORE CATEGORY IN MULTIPLE PLACES FOR BULLETPROOF DETECTION!
+    
+    // 1. CATEGORY AS FIRST TAG (primary method)
     const tagsToUpload = `${normalizedCategory},portfolio,gangajal,${title.replace(/\s+/g, '_')}`;
     cloudinaryForm.append('tags', tagsToUpload);
     
-      // Add context metadata with explicit category
-      const contextData = `title=${title}|description=${description}|category=${normalizedCategory}|uploadDate=${new Date().toISOString()}`;
-      cloudinaryForm.append('context', contextData);
-      
-      console.log(`[Upload] 🎯 STORING CATEGORY: "${normalizedCategory}"`);
-      console.log(`[Upload] Tags: "${tagsToUpload}"`);
-      console.log(`[Upload] Context: "${contextData}"`);    // Upload to Cloudinary
+    // 2. CATEGORY IN CONTEXT (backup method)
+    const contextData = `title=${title}|description=${description}|category=${normalizedCategory}|uploadDate=${new Date().toISOString()}`;
+    cloudinaryForm.append('context', contextData);
+    
+    // 3. CATEGORY IN PUBLIC_ID (triple backup)
+    const categoryPublicId = `${normalizedCategory}_${title.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
+    cloudinaryForm.append('public_id', categoryPublicId);
+    
+    console.log(`\n🎯 TRIPLE CATEGORY STORAGE FOR: "${normalizedCategory}"`);
+    console.log(`📁 Folder: "${categoryFolder}"`);
+    console.log(`🏷️ Tags: "${tagsToUpload}"`);
+    console.log(`📝 Context: "${contextData}"`);
+    console.log(`🔗 Public ID: "${categoryPublicId}"`);    // Upload to Cloudinary
     const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
     
     console.log('Uploading to Cloudinary:', {

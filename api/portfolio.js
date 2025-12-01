@@ -82,75 +82,139 @@ export const getPortfolioItems = async () => {
     // Transform Cloudinary data to portfolio format
     const portfolioItems = data.resources.map((resource, index) => {
 
-      // Parse context for title and description (FIXED PARSING!)
+      // EMERGENCY DEBUG - LOG EVERYTHING CLOUDINARY RETURNS
+      console.log(`\n=== CLOUDINARY RAW DATA FOR IMAGE ${index + 1} ===`);
+      console.log('Public ID:', resource.public_id);
+      console.log('Tags (raw):', resource.tags, 'Type:', typeof resource.tags);
+      console.log('Context (raw):', resource.context, 'Type:', typeof resource.context);
+      console.log('Folder:', resource.folder);
+      
+      // ULTRA-ROBUST CONTEXT PARSING
       let parsedContext = {};
       
-      if (resource.context && typeof resource.context === 'string') {
-        const contextPairs = resource.context.split('|');
-        contextPairs.forEach(pair => {
-          const equalIndex = pair.indexOf('=');
-          if (equalIndex > 0) {
-            const key = pair.substring(0, equalIndex).trim();
-            const value = pair.substring(equalIndex + 1).trim();
-            if (key && value) {
-              parsedContext[key] = value;
-            }
+      try {
+        if (resource.context) {
+          if (typeof resource.context === 'string') {
+            // Handle pipe-separated context: "key=value|key2=value2"
+            const contextPairs = resource.context.split('|');
+            contextPairs.forEach(pair => {
+              const equalIndex = pair.indexOf('=');
+              if (equalIndex > 0) {
+                const key = pair.substring(0, equalIndex).trim();
+                const value = pair.substring(equalIndex + 1).trim();
+                if (key && value) {
+                  parsedContext[key] = value;
+                }
+              }
+            });
+          } else if (typeof resource.context === 'object') {
+            // Handle object context: {category: "commercial", title: "..."}
+            parsedContext = { ...resource.context };
           }
-        });
-      } else if (resource.context && typeof resource.context === 'object') {
-        parsedContext = resource.context;
+        }
+      } catch (e) {
+        console.error('Context parsing failed:', e);
       }
       
-      const title = parsedContext.title || resource.public_id.split('/').pop() || `Image ${index + 1}`;
+      console.log('Parsed context:', parsedContext);
+      
+      const title = parsedContext.title || resource.public_id?.split('/')?.pop() || `Image ${index + 1}`;
       const description = parsedContext.description || '';
       
-      // BULLETPROOF CATEGORY DETECTION LOGIC (ACTUALLY FIXED!)
-      let category = 'product'; // Safe default
+      // NUCLEAR-PROOF CATEGORY DETECTION - HANDLES EVERY POSSIBLE SCENARIO
+      let category = 'product'; // SAFE DEFAULT
       const validCategories = ['commercial', 'travel', 'fashion', 'event', 'product'];
+      let categorySource = 'default';
       
-      // METHOD 1: Check context category (Upload stores it here)
+      console.log(`\n🎯 DETECTING CATEGORY FOR: "${title}"`);
+      
+      // PRIORITY 1: Check parsed context (most reliable for our uploads)
       if (parsedContext.category) {
-        const contextCategory = parsedContext.category.toLowerCase().trim();
+        const contextCategory = String(parsedContext.category).toLowerCase().trim();
+        console.log(`📝 Context category: "${contextCategory}"`);
         if (validCategories.includes(contextCategory)) {
           category = contextCategory;
+          categorySource = 'context';
+          console.log(`✅ SUCCESS: Category from context: "${category}"`);
         }
       }
       
-      // METHOD 2: Check tags (handle both string and array format!)
+      // PRIORITY 2: Check folder name (Cloudinary folders can indicate category)
+      if (category === 'product' && resource.folder) {
+        const folderName = String(resource.folder).toLowerCase().trim();
+        console.log(`📁 Folder name: "${folderName}"`);
+        for (const validCat of validCategories) {
+          if (folderName.includes(validCat)) {
+            category = validCat;
+            categorySource = 'folder';
+            console.log(`✅ SUCCESS: Category from folder: "${category}"`);
+            break;
+          }
+        }
+      }
+      
+      // PRIORITY 3: Check public_id path (might contain category)
+      if (category === 'product' && resource.public_id) {
+        const publicIdLower = String(resource.public_id).toLowerCase();
+        console.log(`🔗 Public ID: "${publicIdLower}"`);
+        for (const validCat of validCategories) {
+          if (publicIdLower.includes(validCat)) {
+            category = validCat;
+            categorySource = 'public_id';
+            console.log(`✅ SUCCESS: Category from public_id: "${category}"`);
+            break;
+          }
+        }
+      }
+      
+      // PRIORITY 4: Handle ALL possible tag formats
       if (resource.tags) {
         let tagsArray = [];
         
-        // Handle tags as string "tag1,tag2,tag3" OR array ["tag1", "tag2", "tag3"]
-        if (typeof resource.tags === 'string') {
-          tagsArray = resource.tags.split(',').map(tag => tag.trim());
-        } else if (Array.isArray(resource.tags)) {
-          tagsArray = resource.tags;
-        }
-        
-        // Check first tag (category should be first)
-        if (tagsArray.length > 0) {
-          const firstTag = tagsArray[0].toLowerCase().trim();
-          if (validCategories.includes(firstTag)) {
-            category = firstTag;
+        try {
+          if (typeof resource.tags === 'string') {
+            // Handle comma-separated string: "tag1,tag2,tag3"
+            tagsArray = resource.tags.split(',').map(tag => String(tag).trim()).filter(tag => tag);
+            console.log(`🏷️ Tags parsed from string:`, tagsArray);
+          } else if (Array.isArray(resource.tags)) {
+            // Handle array: ["tag1", "tag2", "tag3"]
+            tagsArray = resource.tags.map(tag => String(tag).trim()).filter(tag => tag);
+            console.log(`🏷️ Tags from array:`, tagsArray);
+          } else {
+            console.log(`🏷️ Unexpected tags format:`, typeof resource.tags);
           }
-        }
-        
-        // Fallback: scan all tags if first tag method failed
-        if (category === 'product' && tagsArray.length > 0) {
-          for (const tag of tagsArray) {
-            const tagLower = tag.toLowerCase().trim();
-            if (validCategories.includes(tagLower) && tagLower !== 'product') {
-              category = tagLower;
-              break;
+          
+          // Check first tag (our uploads put category first)
+          if (tagsArray.length > 0) {
+            const firstTag = tagsArray[0].toLowerCase();
+            console.log(`🥇 First tag: "${firstTag}"`);
+            if (validCategories.includes(firstTag)) {
+              category = firstTag;
+              categorySource = 'first_tag';
+              console.log(`✅ SUCCESS: Category from first tag: "${category}"`);
             }
           }
+          
+          // Scan ALL tags if still no match
+          if (category === 'product' && tagsArray.length > 0) {
+            console.log(`🔍 Scanning all tags for category...`);
+            for (const tag of tagsArray) {
+              const tagLower = String(tag).toLowerCase().trim();
+              if (validCategories.includes(tagLower) && tagLower !== 'product') {
+                category = tagLower;
+                categorySource = 'tag_scan';
+                console.log(`✅ SUCCESS: Found category in tags: "${category}"`);
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Tags processing failed:', e);
         }
       }
       
-      // Only log if category detection fails (for debugging)
-      if (category === 'product' && resource.tags && resource.tags.length > 0) {
-        console.warn(`[Portfolio] Category defaulted to 'product' for "${title}" - Tags:`, resource.tags);
-      }
+      console.log(`🎯 FINAL CATEGORY: "${category}" (source: ${categorySource})`);
+      console.log(`==========================================\n`);
       
 
       
