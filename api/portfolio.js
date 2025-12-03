@@ -58,14 +58,11 @@ export const getPortfolioItems = async () => {
         console.log(`[Cloudinary DB] Found ${videoData.resources.length} videos`);
       }
 
-      const data = { resources: allResources };
+      console.log(`[Cloudinary DB] Total media items: ${allResources.length}`);
 
-      if (data.resources && data.resources.length > 0) {
-
-        console.log(`[Cloudinary DB] Total media items: ${data.resources.length}`);
-        
+      if (allResources && allResources.length > 0) {
         // Debug recent uploads
-        const recentUploads = data.resources.filter(r => {
+        const recentUploads = allResources.filter(r => {
           const uploadTime = new Date(r.created_at);
           const now = new Date();
           const diffHours = (now.getTime() - uploadTime.getTime()) / (1000 * 60 * 60);
@@ -88,15 +85,15 @@ export const getPortfolioItems = async () => {
       console.error('[Cloudinary DB] List API error:', listError.message);
     }
 
-    if (!data || !data.resources || data.resources.length === 0) {
+    if (!allResources || allResources.length === 0) {
       console.log('[Cloudinary DB] No portfolio images found in Cloudinary');
       return [];
     }
 
-    console.log(`[Cloudinary DB] Processing ${data.resources.length} images...`);
+    console.log(`[Cloudinary DB] Processing ${allResources.length} resources...`);
 
     // Transform Cloudinary data to portfolio format
-    const portfolioItems = data.resources.map((resource, index) => {
+    const portfolioItems = allResources.map((resource, index) => {
 
       // Parse context (title, description, category)
       let parsedContext = {};
