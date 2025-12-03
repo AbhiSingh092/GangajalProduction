@@ -293,16 +293,21 @@ export default function ShootCategories() {
       </div>
 
       {selectedCategory && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center backdrop-blur-sm overflow-hidden">
-          <div className="w-full h-full md:max-w-6xl md:h-auto bg-gray-900 md:rounded-2xl overflow-y-auto">
-            <div className="relative">
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center backdrop-blur-sm">
+          <div className="relative w-full h-full md:max-w-6xl md:h-[90vh] bg-gray-900 md:rounded-2xl overflow-hidden flex flex-col">
+            {/* Fixed Header with Close Button */}
+            <div className="flex-shrink-0 flex justify-end p-4 bg-gray-900">
               <button
                 onClick={() => setSelectedCategory(null)}
-                className="sticky top-4 right-4 ml-auto mr-4 z-20 w-12 h-12 md:w-10 md:h-10 bg-amber-500 rounded-full flex items-center justify-center hover:bg-amber-600 transition-colors shadow-lg"
+                className="w-12 h-12 md:w-10 md:h-10 bg-amber-500 rounded-full flex items-center justify-center hover:bg-amber-600 transition-colors shadow-lg"
               >
                 <X className="w-7 h-7 md:w-6 md:h-6 text-black" />
               </button>
-              <div className="p-4 md:p-8 pb-20 md:pb-8">
+            </div>
+            
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4 md:p-8 pt-0">
                 <h3 className="font-playfair text-2xl md:text-3xl font-bold text-white mb-2">
                   {selectedCategory.title}
                 </h3>
@@ -373,7 +378,7 @@ export default function ShootCategories() {
 
                 {/* View All Button */}
                 {selectedCategory.images.length > 6 && (
-                  <div className="text-center mt-8">
+                  <div className="text-center mt-8 pb-8">
                     <button
                       onClick={() => {
                         const imageUrls = selectedCategory.images.filter(url => !url.match(/\.(mp4|webm|ogg)$/i));

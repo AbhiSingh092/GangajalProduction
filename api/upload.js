@@ -87,12 +87,15 @@ export default async function handler(req, res) {
     const tags = `${finalCategory},portfolio,gangajal,${title.replace(/\s+/g, "_")}`;
     const context = `title=${title}|description=${description}|category=${finalCategory}`;
 
-    // Create signature for signed upload (include resource_type for videos)
-    const paramsToSign = `context=${context}&folder=${folder}&public_id=${publicId}&resource_type=${resourceType}&tags=${tags}&timestamp=${timestamp}`;
+    // Create signature for signed upload (DO NOT include resource_type in signature)
+    const paramsToSign = `context=${context}&folder=${folder}&public_id=${publicId}&tags=${tags}&timestamp=${timestamp}`;
     const signature = crypto
       .createHash("sha1")
       .update(paramsToSign + CLOUDINARY_API_SECRET)
       .digest("hex");
+
+    console.log(`[Upload] Signature params: ${paramsToSign}`);
+    console.log(`[Upload] Signature: ${signature}`);
 
     // Prepare data for Cloudinary
     const cloudForm = new FormData();
@@ -100,7 +103,6 @@ export default async function handler(req, res) {
     cloudForm.append("api_key", CLOUDINARY_API_KEY);
     cloudForm.append("timestamp", timestamp.toString());
     cloudForm.append("signature", signature);
-    cloudForm.append("resource_type", resourceType);
     cloudForm.append("folder", folder);
     cloudForm.append("public_id", publicId);
     cloudForm.append("tags", tags);
