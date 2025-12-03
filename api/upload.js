@@ -4,11 +4,13 @@
 import { IncomingForm } from "formidable";
 import crypto from "crypto";
 
-// Disable default body parsing
+// Disable default body parsing and increase payload limit
 export const config = {
   api: {
     bodyParser: false,
+    responseLimit: false,
   },
+  maxDuration: 60,
 };
 
 export default async function handler(req, res) {
