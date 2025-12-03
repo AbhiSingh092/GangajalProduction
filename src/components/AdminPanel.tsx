@@ -109,38 +109,91 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
     setIsLoading(true);
     try {
-      // Upload file with metadata to Cloudinary (permanent storage!)
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('category', category);
-      formData.append('title', title);
-      formData.append('description', description);
+      const fileSizeMB = selectedFile.size / (1024 * 1024);
+      const isLargeFile = fileSizeMB > 4; // Use direct upload for files > 4MB
+      
+      console.log(`[handleAddItem] File size: ${fileSizeMB.toFixed(2)}MB, using ${isLargeFile ? 'DIRECT' : 'SERVER'} upload`);
 
-      console.log('[handleAddItem] Uploading file:', selectedFile.name, selectedFile.type);
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
+      let uploadData: any;
 
-      if (!uploadRes.ok) {
-        let errData: any = {};
-        try {
-          const uploadErrorText = await uploadRes.text();
-          if (uploadErrorText.trim()) {
-            errData = JSON.parse(uploadErrorText);
-          }
-        } catch (e) {
-          console.warn('Failed to parse upload error response:', e);
+      if (isLargeFile) {
+        // DIRECT UPLOAD to Cloudinary (bypasses Vercel 4.5MB limit)
+        console.log('[handleAddItem] Getting upload signature...');
+        const sigRes = await fetch('/api/upload-signature', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category, title, description })
+        });
+
+        if (!sigRes.ok) {
+          throw new Error('Failed to get upload signature');
         }
-        throw new Error(errData.details || errData.error || `Upload failed: HTTP ${uploadRes.status}`);
-      }
 
-      const uploadResponseText = await uploadRes.text();
-      if (!uploadResponseText.trim()) {
-        throw new Error('Empty response from upload server');
+        const sigData = await sigRes.json();
+        console.log('[handleAddItem] Got signature, uploading directly to Cloudinary...');
+
+        // Determine resource type
+        const isVideo = selectedFile.type.startsWith('video/');
+        const resourceType = isVideo ? 'video' : 'image';
+
+        // Upload directly to Cloudinary
+        const cloudinaryFormData = new FormData();
+        cloudinaryFormData.append('file', selectedFile);
+        cloudinaryFormData.append('api_key', sigData.api_key);
+        cloudinaryFormData.append('timestamp', sigData.timestamp);
+        cloudinaryFormData.append('signature', sigData.signature);
+        cloudinaryFormData.append('folder', sigData.folder);
+        cloudinaryFormData.append('public_id', sigData.public_id);
+        cloudinaryFormData.append('tags', sigData.tags);
+        cloudinaryFormData.append('context', sigData.context);
+
+        const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${sigData.cloud_name}/${resourceType}/upload`;
+        const cloudRes = await fetch(cloudinaryUrl, {
+          method: 'POST',
+          body: cloudinaryFormData
+        });
+
+        if (!cloudRes.ok) {
+          const errText = await cloudRes.text();
+          throw new Error(`Cloudinary upload failed: ${errText}`);
+        }
+
+        uploadData = await cloudRes.json();
+        console.log('[handleAddItem] Direct upload success:', uploadData.secure_url);
+      } else {
+        // REGULAR upload through our API (for small files)
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('category', category);
+        formData.append('title', title);
+        formData.append('description', description);
+
+        console.log('[handleAddItem] Uploading file:', selectedFile.name, selectedFile.type);
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!uploadRes.ok) {
+          let errData: any = {};
+          try {
+            const uploadErrorText = await uploadRes.text();
+            if (uploadErrorText.trim()) {
+              errData = JSON.parse(uploadErrorText);
+            }
+          } catch (e) {
+            console.warn('Failed to parse upload error response:', e);
+          }
+          throw new Error(errData.details || errData.error || `Upload failed: HTTP ${uploadRes.status}`);
+        }
+
+        const uploadResponseText = await uploadRes.text();
+        if (!uploadResponseText.trim()) {
+          throw new Error('Empty response from upload server');
+        }
+        uploadData = JSON.parse(uploadResponseText);
+        console.log('[handleAddItem] Upload success:', uploadData.secure_url);
       }
-      const uploadData = JSON.parse(uploadResponseText);
-      console.log('[handleAddItem] Upload success:', uploadData.secure_url);
       
       if (!uploadData.secure_url) {
         throw new Error('No image URL returned from upload');
