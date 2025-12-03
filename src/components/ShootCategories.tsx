@@ -237,18 +237,18 @@ export default function ShootCategories() {
       
         {/* Debug panel removed from production UI */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
           {categories.map((category, index) => {
             const Icon = category.icon;
             return (
               <div
                 key={category.id}
-                className="group relative overflow-hidden rounded-2xl cursor-pointer transform transition-all duration-500 hover:scale-105"
+                className="group relative overflow-hidden rounded-xl md:rounded-2xl cursor-pointer transform transition-all duration-500 hover:scale-105 active:scale-95 touch-manipulation"
                 onClick={() => setSelectedCategory(category)}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
-                <div className="h-80 transition-transform duration-700 group-hover:scale-110 overflow-hidden">
+                <div className="h-64 md:h-80 transition-transform duration-700 group-hover:scale-110 overflow-hidden">
                   {isLoading ? (
                     <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
                       <span className="text-gray-400">Loading...</span>
@@ -275,16 +275,16 @@ export default function ShootCategories() {
                   )}
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-6 z-20">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
-                      <Icon className="w-6 h-6 text-black" />
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 z-20">
+                  <div className="flex items-center space-x-2 md:space-x-3 mb-1 md:mb-2">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-500 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+                      <Icon className="w-5 h-5 md:w-6 md:h-6 text-black" />
                     </div>
-                    <h3 className="font-playfair text-2xl font-bold text-white">
+                    <h3 className="font-playfair text-xl md:text-2xl font-bold text-white">
                       {category.title}
                     </h3>
                   </div>
-                  <p className="text-gray-300 text-sm">{category.description}</p>
+                  <p className="text-gray-300 text-xs md:text-sm line-clamp-2">{category.description}</p>
                 </div>
               </div>
             );
@@ -293,45 +293,46 @@ export default function ShootCategories() {
       </div>
 
       {selectedCategory && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-          <div className="max-w-6xl w-full bg-gray-900 rounded-2xl overflow-hidden">
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center backdrop-blur-sm overflow-hidden">
+          <div className="w-full h-full md:max-w-6xl md:h-auto bg-gray-900 md:rounded-2xl overflow-y-auto">
             <div className="relative">
               <button
                 onClick={() => setSelectedCategory(null)}
-                className="absolute top-4 right-4 z-10 w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center hover:bg-amber-600 transition-colors"
+                className="sticky top-4 right-4 ml-auto mr-4 z-20 w-12 h-12 md:w-10 md:h-10 bg-amber-500 rounded-full flex items-center justify-center hover:bg-amber-600 transition-colors shadow-lg"
               >
-                <X className="w-6 h-6 text-black" />
+                <X className="w-7 h-7 md:w-6 md:h-6 text-black" />
               </button>
-              <div className="p-8">
-                <h3 className="font-playfair text-3xl font-bold text-white mb-2">
+              <div className="p-4 md:p-8 pb-20 md:pb-8">
+                <h3 className="font-playfair text-2xl md:text-3xl font-bold text-white mb-2">
                   {selectedCategory.title}
                 </h3>
-                <p className="text-gray-400 mb-6">{selectedCategory.description}</p>
+                <p className="text-gray-400 text-sm md:text-base mb-4 md:mb-6">{selectedCategory.description}</p>
 
-                <div className="mb-8">
-                  <h4 className="text-amber-500 font-semibold mb-4">Available Formats</h4>
-                  <div className="flex flex-wrap gap-3">
+                <div className="mb-6 md:mb-8">
+                  <h4 className="text-amber-500 font-semibold mb-3 md:mb-4 text-sm md:text-base">Available Formats</h4>
+                  <div className="flex flex-wrap gap-2 md:gap-3">
                     {selectedCategory.mediaTypes.map((media, index) => (
                       <div
                         key={index}
-                        className="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-4 py-2 hover:border-amber-500/60 transition-colors"
+                        className="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 py-1.5 md:px-4 md:py-2 hover:border-amber-500/60 transition-colors"
                       >
                         {media.type === 'photo' ? (
-                          <Image className="w-4 h-4 text-amber-500" />
+                          <Image className="w-3 h-3 md:w-4 md:h-4 text-amber-500" />
                         ) : (
-                          <Film className="w-4 h-4 text-amber-500" />
+                          <Film className="w-3 h-3 md:w-4 md:h-4 text-amber-500" />
                         )}
-                        <span className="text-sm text-white">{media.label}</span>
+                        <span className="text-xs md:text-sm text-white">{media.label}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Mobile: Single column with vertical scroll, Desktop: Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {selectedCategory.images.map((mediaUrl, index) => (
                     <div
                       key={index}
-                      className="relative h-64 rounded-xl overflow-hidden group bg-gray-700"
+                      className="relative h-56 md:h-64 rounded-lg md:rounded-xl overflow-hidden group bg-gray-700 touch-manipulation"
                     >
                       {isLoading ? (
                         <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-700 animate-pulse flex items-center justify-center">
