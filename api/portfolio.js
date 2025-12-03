@@ -118,26 +118,37 @@ export const getPortfolioItems = async () => {
       const title = parsedContext.title || resource.public_id?.split('/')?.pop() || `Image ${index + 1}`;
       const description = parsedContext.description || '';
       
-      // SIMPLE CATEGORY DETECTION - Check folder FIRST (most reliable)
-      let category = 'product';
+      // DEBUG: Log raw resource data for troubleshooting
+      console.log(`[Portfolio] Processing: ${title}`, {
+        folder: resource.folder,
+        tags: resource.tags,
+        context: parsedContext,
+        public_id: resource.public_id,
+        resource_type: resource.resource_type
+      });
+      
+      // ENHANCED CATEGORY DETECTION - Check context FIRST (most reliable from our upload)
+      let category = 'product'; // default
       const validCategories = ['commercial', 'travel', 'fashion', 'event', 'product'];
       
-      // Method 1: Folder path (gangajal-portfolio/commercial)
-      if (resource.folder) {
+      // Method 1: Context category (MOST RELIABLE - directly from our upload)
+      if (parsedContext.category) {
+        const contextCat = parsedContext.category.toLowerCase().trim();
+        if (validCategories.includes(contextCat)) {
+          category = contextCat;
+          console.log(`[Portfolio] ✅ Category from context: ${category}`);
+        }
+      }
+      
+      // Method 2: Folder path (gangajal-portfolio/commercial)
+      if (category === 'product' && resource.folder) {
         const folderLower = resource.folder.toLowerCase();
         for (const cat of validCategories) {
           if (folderLower.includes(cat)) {
             category = cat;
+            console.log(`[Portfolio] ✅ Category from folder: ${category}`);
             break;
           }
-        }
-      }
-      
-      // Method 2: Context category
-      if (category === 'product' && parsedContext.category) {
-        const contextCat = parsedContext.category.toLowerCase().trim();
-        if (validCategories.includes(contextCat)) {
-          category = contextCat;
         }
       }
       
@@ -148,6 +159,7 @@ export const getPortfolioItems = async () => {
           const firstTag = tags[0].toString().toLowerCase().trim();
           if (validCategories.includes(firstTag)) {
             category = firstTag;
+            console.log(`[Portfolio] ✅ Category from tag: ${category}`);
           }
         }
       }
@@ -158,12 +170,13 @@ export const getPortfolioItems = async () => {
         for (const cat of validCategories) {
           if (idLower.includes(cat)) {
             category = cat;
+            console.log(`[Portfolio] ✅ Category from public_id: ${category}`);
             break;
           }
         }
       }
       
-
+      console.log(`[Portfolio] Final category for "${title}": ${category}`);
       
       const uploadDate = parsedContext.uploadDate || resource.created_at;
       const resourceType = resource.resource_type || 'image';
