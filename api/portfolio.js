@@ -19,16 +19,16 @@ export const getPortfolioItems = async () => {
     }
 
     // Use direct Cloudinary list API for more reliable results
-    const listUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/image`;
     const auth = Buffer.from(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`).toString('base64');
     
-    console.log('[Cloudinary DB] Getting all images from Cloudinary...');
+    console.log('[Cloudinary DB] Getting all media (images + videos) from Cloudinary...');
     
-    let data = null;
+    let allResources = [];
     
     try {
-      // Get all images with tags - use simple list API
-      const response = await fetch(`${listUrl}?tags=true&context=true&max_results=500`, {
+      // Get IMAGES
+      const imageUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/image`;
+      const imageResponse = await fetch(`${imageUrl}?tags=true&context=true&max_results=500`, {
         method: 'GET',
         headers: {
           'Authorization': `Basic ${auth}`,
@@ -36,37 +36,53 @@ export const getPortfolioItems = async () => {
         }
       });
 
-      if (response.ok) {
-        data = await response.json();
+      if (imageResponse.ok) {
+        const imageData = await imageResponse.json();
+        allResources = [...imageData.resources];
+        console.log(`[Cloudinary DB] Found ${imageData.resources.length} images`);
+      }
 
-        
-        // Get ALL images from Cloudinary
-        if (data.resources) {
-          console.log(`[Cloudinary DB] Found ${data.resources.length} total resources`);
-          
-          // Debug recent uploads
-          const recentUploads = data.resources.filter(r => {
-            const uploadTime = new Date(r.created_at);
-            const now = new Date();
-            const diffHours = (now.getTime() - uploadTime.getTime()) / (1000 * 60 * 60);
-            return diffHours < 24; // Last 24 hours
-          });
-          
-          if (recentUploads.length > 0) {
-            console.log(`[Cloudinary DB] 🕒 ${recentUploads.length} uploads in last 24h:`,
-              recentUploads.map(r => ({ 
-                public_id: r.public_id, 
-                tags: r.tags,
-                folder: r.folder,
-                created_at: r.created_at
-              }))
-            );
-          }
+      // Get VIDEOS
+      const videoUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/video`;
+      const videoResponse = await fetch(`${videoUrl}?tags=true&context=true&max_results=500`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
         }
-      } else {
-        console.error(`[Cloudinary DB] List API failed: ${response.status}`);
-        const errorText = await response.text();
-        console.error('[Cloudinary DB] Error details:', errorText);
+      });
+
+      if (videoResponse.ok) {
+        const videoData = await videoResponse.json();
+        allResources = [...allResources, ...videoData.resources];
+        console.log(`[Cloudinary DB] Found ${videoData.resources.length} videos`);
+      }
+
+      const data = { resources: allResources };
+
+      if (data.resources && data.resources.length > 0) {
+
+        console.log(`[Cloudinary DB] Total media items: ${data.resources.length}`);
+        
+        // Debug recent uploads
+        const recentUploads = data.resources.filter(r => {
+          const uploadTime = new Date(r.created_at);
+          const now = new Date();
+          const diffHours = (now.getTime() - uploadTime.getTime()) / (1000 * 60 * 60);
+          return diffHours < 24; // Last 24 hours
+        });
+        
+        if (recentUploads.length > 0) {
+          console.log(`[Cloudinary DB] 🕒 ${recentUploads.length} uploads in last 24h:`,
+            recentUploads.map(r => ({ 
+              public_id: r.public_id, 
+              resource_type: r.resource_type,
+              tags: r.tags,
+              folder: r.folder,
+              created_at: r.created_at
+            }))
+          );
+        }
       }
     } catch (listError) {
       console.error('[Cloudinary DB] List API error:', listError.message);
@@ -150,6 +166,7 @@ export const getPortfolioItems = async () => {
 
       
       const uploadDate = parsedContext.uploadDate || resource.created_at;
+      const resourceType = resource.resource_type || 'image';
 
       return {
         id: index + 1, // Numeric ID as expected by admin panel
@@ -159,9 +176,11 @@ export const getPortfolioItems = async () => {
         description,
         createdAt: uploadDate,
         public_id: resource.public_id, // Keep for delete operations
+        resource_type: resourceType,
         format: resource.format,
         width: resource.width,
         height: resource.height,
+        duration: resource.duration, // for videos
         bytes: resource.bytes
       };
     });

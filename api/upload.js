@@ -26,9 +26,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse multipart form
+    // Parse multipart form (increased size for videos)
     const form = new IncomingForm({
-      maxFileSize: 10 * 1024 * 1024,
+      maxFileSize: 100 * 1024 * 1024, // 100MB for videos
       keepExtensions: true,
     });
 
@@ -60,11 +60,20 @@ export default async function handler(req, res) {
       ? fields.description[0]
       : fields.description || "";
 
-    // Validate image type
-    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    if (!allowed.includes(file.mimetype)) {
-      return res.status(400).json({ error: "Invalid file type" });
+    // Validate file type (images AND videos)
+    const allowedImages = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowedVideos = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"];
+    const allAllowed = [...allowedImages, ...allowedVideos];
+    
+    if (!allAllowed.includes(file.mimetype)) {
+      return res.status(400).json({ 
+        error: "Invalid file type",
+        details: "Only images (JPEG, PNG, WebP, GIF) and videos (MP4, MOV, AVI, WebM) are allowed"
+      });
     }
+
+    const isVideo = allowedVideos.includes(file.mimetype);
+    const resourceType = isVideo ? "video" : "image";
 
     // Read file
     const fs = await import("fs");
@@ -78,8 +87,8 @@ export default async function handler(req, res) {
     const tags = `${finalCategory},portfolio,gangajal,${title.replace(/\s+/g, "_")}`;
     const context = `title=${title}|description=${description}|category=${finalCategory}`;
 
-    // Create signature for signed upload
-    const paramsToSign = `context=${context}&folder=${folder}&public_id=${publicId}&tags=${tags}&timestamp=${timestamp}`;
+    // Create signature for signed upload (include resource_type for videos)
+    const paramsToSign = `context=${context}&folder=${folder}&public_id=${publicId}&resource_type=${resourceType}&tags=${tags}&timestamp=${timestamp}`;
     const signature = crypto
       .createHash("sha1")
       .update(paramsToSign + CLOUDINARY_API_SECRET)
@@ -91,19 +100,23 @@ export default async function handler(req, res) {
     cloudForm.append("api_key", CLOUDINARY_API_KEY);
     cloudForm.append("timestamp", timestamp.toString());
     cloudForm.append("signature", signature);
+    cloudForm.append("resource_type", resourceType);
     cloudForm.append("folder", folder);
     cloudForm.append("public_id", publicId);
     cloudForm.append("tags", tags);
     cloudForm.append("context", context);
 
-    // Upload URL
-    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
+    // Upload URL (different for videos)
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+    
+    console.log(`[Upload] Uploading ${resourceType}: ${file.originalFilename} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
 
-    // Upload to Cloudinary
+    // Upload to Cloudinary (longer timeout for videos)
+    const timeout = isVideo ? 120000 : 30000; // 2 minutes for videos, 30s for images
     const response = await fetch(uploadUrl, {
       method: "POST",
       body: cloudForm,
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(timeout),
     });
 
     // Clean temp file
@@ -128,8 +141,10 @@ export default async function handler(req, res) {
       public_id: result.public_id,
       folder,
       category: finalCategory,
+      resource_type: resourceType,
       width: result.width,
       height: result.height,
+      duration: result.duration, // for videos
       size: result.bytes,
       created_at: result.created_at,
     });
