@@ -85,7 +85,18 @@ export default async function handler(req, res) {
     const folder = `gangajal-portfolio/${finalCategory}`;
     const publicId = `${finalCategory}_${title.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
     const tags = `${finalCategory},portfolio,gangajal,${title.replace(/\s+/g, "_")}`;
+    
+    // Cloudinary context format: key1=value1|key2=value2
     const context = `title=${title}|description=${description}|category=${finalCategory}`;
+
+    console.log(`[Upload] ⚙️ Upload details:`, {
+      category: finalCategory,
+      folder: folder,
+      publicId: publicId,
+      tags: tags,
+      context: context,
+      resourceType: resourceType
+    });
 
     // Create signature for signed upload (DO NOT include resource_type in signature)
     const paramsToSign = `context=${context}&folder=${folder}&public_id=${publicId}&tags=${tags}&timestamp=${timestamp}`;
@@ -93,9 +104,6 @@ export default async function handler(req, res) {
       .createHash("sha1")
       .update(paramsToSign + CLOUDINARY_API_SECRET)
       .digest("hex");
-
-    console.log(`[Upload] Signature params: ${paramsToSign}`);
-    console.log(`[Upload] Signature: ${signature}`);
 
     // Prepare data for Cloudinary
     const cloudForm = new FormData();
@@ -136,19 +144,30 @@ export default async function handler(req, res) {
 
     const result = await response.json();
 
-    console.log(`[Upload] SUCCESS: Uploaded to folder "${folder}" with category "${finalCategory}"`);
+    console.log(`[Upload] ✅ SUCCESS! Cloudinary response:`, {
+      public_id: result.public_id,
+      folder: result.folder,
+      tags: result.tags,
+      context: result.context,
+      resource_type: result.resource_type,
+      secure_url: result.secure_url
+    });
+    
+    console.log(`[Upload] 🎯 Uploaded to category: "${finalCategory}"`);
     
     return res.status(200).json({
       secure_url: result.secure_url,
       public_id: result.public_id,
-      folder,
+      folder: result.folder || folder,
       category: finalCategory,
-      resource_type: resourceType,
+      resource_type: result.resource_type || resourceType,
       width: result.width,
       height: result.height,
       duration: result.duration, // for videos
       size: result.bytes,
       created_at: result.created_at,
+      tags: result.tags,
+      context: result.context
     });
   } catch (err) {
     console.error(err);
